@@ -78,13 +78,14 @@ ColumnLayout {
     function handleWheel(y: real, angleDelta: point): void {
         const ch = childAt(width / 2, y) as EntryWrapper;
         if (ch?.entryId === "workspaces" && Config.bar.scrollActions.workspaces) {
-            // Workspace scroll
-            const mon = (GlobalConfig.bar.workspaces.perMonitorWorkspaces ? Hypr.monitorFor(screen) : Hypr.focusedMonitor);
-            const specialWs = mon?.lastIpcObject.specialWorkspace.name;
-            if (specialWs?.length > 0)
-                Hypr.dispatch(Hypr.usingLua ? `hl.dsp.workspace.toggle_special("${specialWs.slice(8)}")` : `togglespecialworkspace ${specialWs.slice(8)}`);
-            else if (angleDelta.y < 0 || (GlobalConfig.bar.workspaces.perMonitorWorkspaces ? mon.activeWorkspace?.id : Hypr.activeWsId) > 1)
-                Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ workspace = "r${angleDelta.y > 0 ? "-" : "+"}1" })` : `workspace r${angleDelta.y > 0 ? "-" : "+"}1`);
+            // Workspace scroll - clamps at the first/last workspace rather
+            // than wrapping (Hyprland's `workspace r+1/-1` wrapped; there's
+            // no equivalent relative-dispatch here).
+            const ws = Hypr.workspacesFor(screen);
+            const activeIdx = ws.find(w => w.active)?.index ?? 0;
+            const nextIdx = Math.max(0, Math.min(ws.length - 1, activeIdx + (angleDelta.y > 0 ? -1 : 1)));
+            if (nextIdx !== activeIdx)
+                Hypr.switchWorkspace(screen, nextIdx);
         } else if (y < screen.height / 2 && Config.bar.scrollActions.volume) {
             // Volume scroll on top half
             if (angleDelta.y > 0)

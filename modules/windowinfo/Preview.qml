@@ -3,17 +3,20 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Wayland
 import Caelestia.Config
 import qs.components
 import qs.services
 
+// Live window screenshots need `ext-image-copy-capture-v1` (or similar)
+// linked to a toplevel handle, which ironland-copositor doesn't implement
+// yet - see the port notes. Always shows the placeholder rather than a
+// live preview until that lands.
 Item {
     id: root
 
     required property ShellScreen screen
-    required property HyprlandToplevel client
+    required property Toplevel client
 
     Layout.preferredWidth: preview.implicitWidth + Tokens.padding.extraLargeIncreased
     Layout.fillHeight: true
@@ -27,52 +30,38 @@ Item {
         anchors.topMargin: Tokens.padding.large
         anchors.bottomMargin: Tokens.spacing.medium
 
-        implicitWidth: view.implicitWidth
+        implicitWidth: placeholder.implicitWidth + Tokens.padding.extraLargeIncreased * 2
 
         color: Colours.tPalette.m3surfaceContainer
         radius: Tokens.rounding.medium
 
-        Loader {
-            asynchronous: true
+        ColumnLayout {
+            id: placeholder
+
             anchors.centerIn: parent
-            active: !root.client
+            spacing: 0
 
-            sourceComponent: ColumnLayout {
-                spacing: 0
-
-                MaterialIcon {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "web_asset_off"
-                    color: Colours.palette.m3outline
-                    fontStyle: Tokens.font.icon.builders.extraLarge.scale(3).build()
-                }
-
-                StyledText {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: qsTr("No active client")
-                    color: Colours.palette.m3outline
-                    font: Tokens.font.body.builders.large.size(28).weight(Font.Medium).build()
-                }
-
-                StyledText {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: qsTr("Try switching to a window")
-                    color: Colours.palette.m3outline
-                    font: Tokens.font.body.large
-                }
+            MaterialIcon {
+                Layout.alignment: Qt.AlignHCenter
+                text: root.client ? "hide_image" : "web_asset_off"
+                color: Colours.palette.m3outline
+                fontStyle: Tokens.font.icon.builders.extraLarge.scale(3).build()
             }
-        }
 
-        ScreencopyView {
-            id: view
+            StyledText {
+                Layout.alignment: Qt.AlignHCenter
+                text: root.client ? qsTr("No preview available") : qsTr("No active client")
+                color: Colours.palette.m3outline
+                font: Tokens.font.body.builders.large.size(28).weight(Font.Medium).build()
+            }
 
-            anchors.centerIn: parent
-
-            captureSource: root.client?.wayland ?? null // qmllint disable unresolved-type
-            live: true
-
-            constraintSize.width: root.client ? parent.height * Math.min(root.screen.width / root.screen.height, root.client?.lastIpcObject.size[0] / root.client?.lastIpcObject.size[1]) : parent.height
-            constraintSize.height: parent.height
+            StyledText {
+                Layout.alignment: Qt.AlignHCenter
+                visible: text.length > 0
+                text: root.client ? "" : qsTr("Try switching to a window")
+                color: Colours.palette.m3outline
+                font: Tokens.font.body.large
+            }
         }
     }
 
@@ -89,8 +78,8 @@ Item {
             if (!client)
                 return qsTr("No active client");
 
-            const mon = client.monitor;
-            return qsTr("%1 on monitor %2 at %3, %4").arg(client.title).arg(mon.name).arg(client.lastIpcObject.at[0]).arg(client.lastIpcObject.at[1]);
+            const screens = client.screens.map(s => s.name).join(", ");
+            return screens.length > 0 ? qsTr("%1 on %2").arg(client.title).arg(screens) : client.title;
         }
     }
 }

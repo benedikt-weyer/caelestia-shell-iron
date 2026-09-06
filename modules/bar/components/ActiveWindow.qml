@@ -70,7 +70,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
 
         animate: true
-        text: Icons.getAppCategoryIcon(Hypr.activeToplevel?.lastIpcObject.class, "desktop_windows")
+        text: Icons.getAppCategoryIcon(Hypr.activeToplevel?.appId, "desktop_windows")
         color: root.colour
     }
 

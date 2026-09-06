@@ -2,213 +2,78 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
-import Quickshell.Io
-import Caelestia.Config
-import Caelestia.Services
-import qs.components.misc
+import Quickshell.Wayland
+import qs.services
 
+// Compositor-agnostic replacement for what used to be a thin wrapper around
+// Quickshell.Hyprland: toplevels come from the generic
+// wlr-foreign-toplevel-management-v1 (via Quickshell's own ToplevelManager,
+// no compositor-specific glue needed), workspaces from IronWorkspaces (the
+// ext-workspace-v1 bridge - see that file), and "monitor" is just a
+// ShellScreen, since there's no separate monitor-info type to wrap anymore.
+//
+// Concepts that had no home outside Hyprland's own IPC - special
+// workspaces, "game mode" config toggles, keyboard layout/caps-lock/num-lock
+// tracking - are gone; their consumers now use fixed fallbacks. See the
+// caelestia-shell-iron port notes for the full list.
 Singleton {
     id: root
 
-    readonly property var toplevels: Hyprland.toplevels
-    readonly property var workspaces: Hyprland.workspaces
-    readonly property var monitors: Hyprland.monitors
-    readonly property bool usingLua: Hyprland.usingLua
+    readonly property var toplevels: ToplevelManager.toplevels
+    readonly property Toplevel activeToplevel: ToplevelManager.activeToplevel
 
-    readonly property HyprlandToplevel activeToplevel: {
-        const t = Hyprland.activeToplevel;
-        return t?.workspace?.name.startsWith("special:") || Hyprland.focusedWorkspace?.toplevels.values.length > 0 ? t : null;
-    }
-    readonly property HyprlandWorkspace focusedWorkspace: Hyprland.focusedWorkspace
-    readonly property HyprlandMonitor focusedMonitor: Hyprland.focusedMonitor
-    readonly property int activeWsId: focusedWorkspace?.id ?? 1
+    // No generic protocol reports "the focused output" directly - approximated
+    // as whichever output the active toplevel is on, falling back to the
+    // first screen (e.g. nothing focused yet, or focus is on a layer-shell
+    // surface rather than a window).
+    readonly property ShellScreen focusedMonitor: root.activeToplevel?.screens[0] ?? Quickshell.screens[0] ?? null
 
-    readonly property HyprKeyboard keyboard: extras.devices.keyboards.find(kb => kb.main) ?? null
-    readonly property bool capsLock: keyboard?.capsLock ?? false
-    readonly property bool numLock: keyboard?.numLock ?? false
-    readonly property string defaultKbLayout: keyboard?.layout.split(",")[0] ?? "??"
-    readonly property string kbLayoutFull: keyboard?.activeKeymap ?? "Unknown"
-    readonly property string kbLayout: kbMap.get(kbLayoutFull) ?? "??"
-    readonly property var kbMap: new Map()
+    readonly property var focusedWorkspaces: root.focusedMonitor ? IronWorkspaces.workspacesFor(root.focusedMonitor.name) : []
+    readonly property var focusedWorkspace: root.focusedWorkspaces.find(w => w.active) ?? null
+    readonly property int activeWsId: (root.focusedWorkspace?.index ?? 0) + 1
 
-    readonly property alias extras: extras
-    readonly property alias options: extras.options
-    readonly property alias devices: extras.devices
-
-    property string lastSpecialWorkspace: ""
-
-    signal configReloaded
-
-    function dispatch(request: string): void {
-        Hyprland.dispatch(request);
-    }
-
-    function cycleSpecialWorkspace(direction: string): void {
-        const openSpecials = workspaces.values.filter(w => w.name.startsWith("special:") && w.lastIpcObject.windows > 0);
-
-        if (openSpecials.length === 0)
-            return;
-
-        const activeSpecial = focusedMonitor.lastIpcObject.specialWorkspace.name ?? "";
-
-        if (!activeSpecial) {
-            if (lastSpecialWorkspace) {
-                const workspace = workspaces.values.find(w => w.name === lastSpecialWorkspace);
-                if (workspace && workspace.lastIpcObject.windows > 0) {
-                    dispatch(usingLua ? `hl.dsp.focus({ workspace = "${lastSpecialWorkspace}" })` : `workspace ${lastSpecialWorkspace}`);
-                    return;
-                }
-            }
-            dispatch(usingLua ? `hl.dsp.focus({ workspace = "${openSpecials[0].name}" })` : `workspace ${openSpecials[0].name}`);
-            return;
-        }
-
-        const currentIndex = openSpecials.findIndex(w => w.name === activeSpecial);
-        let nextIndex = 0;
-
-        if (currentIndex !== -1) {
-            if (direction === "next")
-                nextIndex = (currentIndex + 1) % openSpecials.length;
-            else
-                nextIndex = (currentIndex - 1 + openSpecials.length) % openSpecials.length;
-        }
-
-        dispatch(usingLua ? `hl.dsp.focus({ workspace = "${openSpecials[nextIndex].name}" })` : `workspace ${openSpecials[nextIndex].name}`);
+    function monitorFor(screen: ShellScreen): ShellScreen {
+        return screen;
     }
 
     function monitorNames(): list<string> {
-        return monitors.values.map(e => e.name);
+        return Quickshell.screens.map(s => s.name);
     }
 
-    function monitorFor(screen: ShellScreen): HyprlandMonitor {
-        return Hyprland.monitorFor(screen);
+    function workspacesFor(screen: ShellScreen): var {
+        return screen ? IronWorkspaces.workspacesFor(screen.name) : [];
     }
 
-    function toplevelsForWs(ws: int): list<HyprlandToplevel> {
-        return toplevels.values.filter(t => t.workspace && t.workspace.id === ws && !isToplevelIgnored(t));
+    function switchWorkspace(screen: ShellScreen, index: int): void {
+        if (screen)
+            IronWorkspaces.activate(screen.name, index);
     }
 
-    function isToplevelIgnored(toplevel: HyprlandToplevel): bool {
-        const ipc = toplevel?.lastIpcObject;
-        if (!ipc?.class || !ipc.mapped)
-            return true;
+    // Best-effort: matches by title+app id against the workspace's window
+    // list from IronWorkspaces (see its doc for why there's no stable id to
+    // match on instead), since wlr-foreign-toplevel-management-v1 has no
+    // workspace concept of its own.
+    function toplevelsForWs(screen: ShellScreen, wsIndex: int): list<Toplevel> {
+        const ws = root.workspacesFor(screen).find(w => w.index === wsIndex);
+        if (!ws || !ws.windows.length)
+            return [];
 
-        const ignoredTags = GlobalConfig.bar.workspaces.ignoredTags;
-        return ipc.tags?.some(tag => ignoredTags.includes(tag.replace(/\*$/, ""))) ?? false;
+        return root.toplevels.values.filter(t => ws.windows.some(w => w.title === t.title && w.appId === t.appId));
     }
 
-    function reloadDynamicConfs(): void {
-        if (usingLua) {
-            extras.batchMessage(['eval hl.bind("Caps_Lock", hl.dsp.global("caelestia:refreshDevices"), { locked = true, non_consuming = true, ignore_mods = true, release = true })', 'eval hl.bind("Num_Lock", hl.dsp.global("caelestia:refreshDevices"), { locked = true, non_consuming = true, ignore_mods = true, release = true })']);
-        } else {
-            extras.batchMessage(["keyword bindlni ,Caps_Lock,global,caelestia:refreshDevices", "keyword bindlni ,Num_Lock,global,caelestia:refreshDevices"]);
-        }
+    function isToplevelIgnored(toplevel: Toplevel): bool {
+        return !toplevel?.appId;
     }
 
-    onUsingLuaChanged: reloadDynamicConfs()
-    Component.onCompleted: reloadDynamicConfs()
-
-    Connections {
-        function onRawEvent(event: HyprlandEvent): void {
-            const n = event.name;
-            if (n.endsWith("v2"))
-                return;
-
-            if (n === "configreloaded") {
-                root.configReloaded();
-                root.reloadDynamicConfs();
-            } else if (["workspace", "moveworkspace", "activespecial", "focusedmon"].includes(n)) {
-                Hyprland.refreshWorkspaces();
-                Hyprland.refreshMonitors();
-            } else if (["openwindow", "closewindow", "movewindow"].includes(n)) {
-                Hyprland.refreshToplevels();
-                Hyprland.refreshWorkspaces();
-            } else if (n.includes("mon")) {
-                Hyprland.refreshMonitors();
-            } else if (n.includes("workspace")) {
-                Hyprland.refreshWorkspaces();
-            } else if (n.includes("window") || n.includes("group") || ["pin", "fullscreen", "changefloatingmode", "minimize"].includes(n)) {
-                Hyprland.refreshToplevels();
-            }
-        }
-
-        target: Hyprland
-    }
-
-    Connections {
-        function onLastIpcObjectChanged(): void {
-            const specialName = root.focusedMonitor.lastIpcObject.specialWorkspace.name;
-
-            if (specialName && specialName.startsWith("special:")) {
-                root.lastSpecialWorkspace = specialName;
-            }
-        }
-
-        target: root.focusedMonitor
-    }
-
-    FileView {
-        id: kbLayoutFile
-
-        path: Quickshell.env("CAELESTIA_XKB_RULES_PATH") || "/usr/share/X11/xkb/rules/base.lst"
-        onLoaded: {
-            const layoutMatch = text().match(/! layout\n([\s\S]*?)\n\n/);
-            if (layoutMatch) {
-                const lines = layoutMatch[1].split("\n");
-                for (const line of lines) {
-                    if (!line.trim() || line.trim().startsWith("!"))
-                        continue;
-
-                    const match = line.match(/^\s*([a-z]{2,})\s+([a-zA-Z() ]+)$/);
-                    if (match)
-                        root.kbMap.set(match[2], match[1]);
-                }
-            }
-
-            const variantMatch = text().match(/! variant\n([\s\S]*?)\n\n/);
-            if (variantMatch) {
-                const lines = variantMatch[1].split("\n");
-                for (const line of lines) {
-                    if (!line.trim() || line.trim().startsWith("!"))
-                        continue;
-
-                    const match = line.match(/^\s*([a-zA-Z0-9_-]+)\s+([a-z]{2,}): (.+)$/);
-                    if (match)
-                        root.kbMap.set(match[3], match[2]);
-                }
-            }
-        }
-    }
-
-    IpcHandler {
-        function refreshDevices(): void {
-            extras.refreshDevices();
-        }
-
-        function cycleSpecialWorkspace(direction: string): void {
-            root.cycleSpecialWorkspace(direction);
-        }
-
-        function listSpecialWorkspaces(): string {
-            return root.workspaces.values.filter(w => w.name.startsWith("special:") && w.lastIpcObject.windows > 0).map(w => w.name).join("\n");
-        }
-
-        target: "hypr"
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "refreshDevices"
-        description: "Reload devices"
-        onPressed: extras.refreshDevices()
-        onReleased: extras.refreshDevices()
-    }
-
-    HyprExtras {
-        id: extras
-
-        usingLua: Hyprland.usingLua
-    }
+    // Keyboard device tracking rode entirely on Hyprland's own IPC
+    // (HyprExtras/HyprDevices) - no generic protocol reports caps-lock/
+    // num-lock/layout, so these are fixed "off"/"unknown" stubs. Consumers
+    // (StatusIcons, LockStatus, the lock screen's state message) already
+    // degrade sensibly on these: the caps/num-lock indicators just never
+    // show, and the layout label reads as unknown.
+    readonly property bool capsLock: false
+    readonly property bool numLock: false
+    readonly property string defaultKbLayout: "??"
+    readonly property string kbLayoutFull: qsTr("Unknown")
+    readonly property string kbLayout: "??"
 }

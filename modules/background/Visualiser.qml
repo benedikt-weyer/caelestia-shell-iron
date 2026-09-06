@@ -15,7 +15,11 @@ Item {
     required property ShellScreen screen
     required property Item wallpaper
 
-    readonly property bool shouldBeActive: Config.background.visualiser.enabled && (!Config.background.visualiser.autoHide || (Hypr.monitorFor(screen)?.activeWorkspace?.toplevels?.values.every(t => t.lastIpcObject?.floating) ?? true))
+    // "Floating" has no equivalent under ironland-copositor's protocol
+    // surface (see the port notes) - autoHide degrades to "hide whenever
+    // the active workspace has any window at all", since none can ever be
+    // floating.
+    readonly property bool shouldBeActive: Config.background.visualiser.enabled && (!Config.background.visualiser.autoHide || (Hypr.workspacesFor(screen).find(w => w.active)?.windows.length ?? 0) === 0)
     property real offset: shouldBeActive ? 0 : screen.height * 0.2
 
     opacity: shouldBeActive ? 1 : 0

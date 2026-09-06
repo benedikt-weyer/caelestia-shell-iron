@@ -17,8 +17,13 @@ MouseArea {
 
     property bool onClient
 
-    property real realBorderWidth: onClient ? (Hypr.options["general:border_size"] ?? 1) : 2
-    property real realRounding: onClient ? (Hypr.options["decoration:rounding"] ?? 0) : 0
+    // Was synced live from Hyprland's own border config for visual parity
+    // when snapped to a window rect - both that sync and the snap itself
+    // (see `clients`/`checkClientRects` below) needed per-window on-screen
+    // geometry, which no generic Wayland protocol exposes to a client (by
+    // design - see the port notes). Fixed values now.
+    property real realBorderWidth: 2
+    property real realRounding: 0
 
     property real ssx
     property real ssy
@@ -33,43 +38,14 @@ MouseArea {
     property real sw: Math.abs(sx - ex)
     property real sh: Math.abs(sy - ey)
 
-    property list<var> clients: {
-        const mon = Hypr.monitorFor(screen);
-        if (!mon)
-            return [];
+    // Click-to-select-a-window needed each window's on-screen position/size,
+    // which (unlike Hyprland's IPC) no generic Wayland protocol exposes to
+    // a client - by design, not an oversight of ironland-copositor's (see
+    // the port notes). Manual rectangle selection (drag) still works;
+    // there's just nothing to snap to anymore.
+    property list<var> clients: []
 
-        const special = mon.lastIpcObject.specialWorkspace;
-        const wsId = special.name ? special.id : mon.activeWorkspace.id;
-
-        return Hypr.toplevelsForWs(wsId).sort((a, b) => {
-            // Pinned first, then fullscreen, then floating, then any other
-            const ac = a.lastIpcObject;
-            const bc = b.lastIpcObject;
-            return (bc.pinned - ac.pinned) || ((bc.fullscreen !== 0) - (ac.fullscreen !== 0)) || (bc.floating - ac.floating);
-        });
-    }
-
-    function checkClientRects(x: real, y: real): void {
-        for (const client of clients) {
-            if (!client)
-                continue;
-
-            let {
-                at: [cx, cy],
-                size: [cw, ch]
-            } = client.lastIpcObject;
-            cx -= screen.x;
-            cy -= screen.y;
-            if (cx <= x && cy <= y && cx + cw >= x && cy + ch >= y) {
-                onClient = true;
-                sx = cx;
-                sy = cy;
-                ex = cx + cw;
-                ey = cy + ch;
-                break;
-            }
-        }
-    }
+    function checkClientRects(x: real, y: real): void {}
 
     function save(): void {
         const tmpfile = Qt.resolvedUrl(`/tmp/caelestia-picker-${Quickshell.processId}-${Date.now()}.png`);
@@ -92,29 +68,18 @@ MouseArea {
     cursorShape: Qt.CrossCursor
 
     Component.onCompleted: {
-        Hypr.extras.refreshOptions();
-
         // Break binding if frozen
         if (loader.freeze)
             clients = clients;
 
         opacity = 1;
 
-        const c = clients[0];
-        if (c) {
-            const cx = c.lastIpcObject.at[0] - screen.x;
-            const cy = c.lastIpcObject.at[1] - screen.y;
-            onClient = true;
-            sx = cx;
-            sy = cy;
-            ex = cx + c.lastIpcObject.size[0];
-            ey = cy + c.lastIpcObject.size[1];
-        } else {
-            sx = screen.width / 2 - 100;
-            sy = screen.height / 2 - 100;
-            ex = screen.width / 2 + 100;
-            ey = screen.height / 2 + 100;
-        }
+        // No window rect to default to anymore (see `clients` above) -
+        // always starts centred.
+        sx = screen.width / 2 - 100;
+        sy = screen.height / 2 - 100;
+        ex = screen.width / 2 + 100;
+        ey = screen.height / 2 + 100;
     }
 
     onPressed: event => {

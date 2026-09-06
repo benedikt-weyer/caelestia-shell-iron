@@ -82,17 +82,12 @@ Singleton {
         Quickshell.execDetached(["caelestia", "scheme", "set", "--notify", "-m", mode]);
     }
 
-    function reloadHyprRules(): void {
-        let rule, trEnabled;
-        if (Hypr.usingLua) {
-            rule = `eval hl.layer_rule({ match = { namespace = "caelestia-drawers" }, %1 = %2 })`;
-            trEnabled = transparency.enabled;
-        } else {
-            rule = "keyword layerrule %1 %2, match:namespace caelestia-drawers";
-            trEnabled = transparency.enabled ? 1 : 0;
-        }
-        Hypr.extras.batchMessage([rule.arg("blur").arg(trEnabled), rule.arg("ignore_alpha").arg(Math.max(0, transparency.base - 0.03))]);
-    }
+    // Was a live edit of Hyprland's own layer-rule config (blur/ignore_alpha
+    // for the drawers' backdrop) to match the transparency setting - purely
+    // Hyprland config automation, nothing to port. ironland-copositor's own
+    // `blur` config setting covers backdrop blur compositor-wide instead
+    // (see its `[blur]` section), just not per-namespace like this did.
+    function reloadHyprRules(): void {}
 
     function requestReloadHyprRules(): void {
         if (cooldownTimer.running) {

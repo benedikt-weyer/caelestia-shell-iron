@@ -39,15 +39,7 @@ QtObject {
     property bool hasActionIcons
     property list<var> actions
 
-    readonly property bool hasFullscreen: {
-        const monitor = Hypr.focusedMonitor;
-        const specialName = monitor?.lastIpcObject.specialWorkspace?.name;
-        if (specialName) {
-            const specialWs = Hypr.workspaces.values.find(ws => ws.name === specialName);
-            return specialWs?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
-        }
-        return monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
-    }
+    readonly property bool hasFullscreen: Hypr.toplevels.values.some(t => t.fullscreen && t.screens.includes(Hypr.focusedMonitor))
 
     readonly property Timer timer: Timer {
         running: true

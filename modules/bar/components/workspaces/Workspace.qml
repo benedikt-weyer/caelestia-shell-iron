@@ -12,6 +12,7 @@ import qs.utils
 ColumnLayout {
     id: root
 
+    required property ShellScreen screen
     required property int index
     required property int activeWsId
     required property var occupied
@@ -100,7 +101,7 @@ ColumnLayout {
                 if (label)
                     return label;
 
-                const ws = Hypr.workspaces.values.find(w => w.id === root.ws);
+                const ws = Hypr.workspacesFor(root.screen).find(w => w.index === root.ws - 1);
                 const wsName = !ws || ws.name == root.ws ? root.ws : ws.name[0];
 
                 const capitalisation = Config.bar.workspaces.capitalisation;
@@ -154,7 +155,7 @@ ColumnLayout {
             Repeater {
                 model: ScriptModel {
                     values: {
-                        const windows = Hypr.toplevelsForWs(root.ws);
+                        const windows = Hypr.toplevelsForWs(root.screen, root.ws - 1);
                         const maxIcons = root.Config.bar.workspaces.maxWindowIcons;
                         return maxIcons > 0 ? windows.slice(0, maxIcons) : windows;
                     }
@@ -164,7 +165,7 @@ ColumnLayout {
                     required property var modelData
 
                     grade: 0
-                    text: Icons.getAppCategoryIcon(modelData.lastIpcObject.class, "terminal")
+                    text: Icons.getAppCategoryIcon(modelData.appId, "terminal")
                     color: Colours.palette.m3onSurfaceVariant
                 }
             }

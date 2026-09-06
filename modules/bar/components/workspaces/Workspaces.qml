@@ -14,18 +14,21 @@ StyledClippingRect {
     required property ShellScreen screen
     required property bool fullscreen
 
-    readonly property bool onSpecial: (GlobalConfig.bar.workspaces.perMonitorWorkspaces ? Hypr.monitorFor(screen) : Hypr.focusedMonitor)?.lastIpcObject.specialWorkspace?.name !== ""
-    readonly property int activeWsId: GlobalConfig.bar.workspaces.perMonitorWorkspaces ? (Hypr.monitorFor(screen).activeWorkspace?.id ?? 1) : Hypr.activeWsId
+    // Special workspaces were a Hyprland-only concept with no equivalent
+    // under ironland-copositor's workspace model - always false/0 now, kept
+    // as properties so the bindings below don't need individual changes.
+    readonly property bool onSpecial: false
+    readonly property int activeWsId: (Hypr.workspacesFor(screen).find(w => w.active)?.index ?? 0) + 1
 
     readonly property var occupied: {
         const occ = {};
-        for (const ws of Hypr.workspaces.values)
-            occ[ws.id] = ws.lastIpcObject.windows > 0;
+        for (const ws of Hypr.workspacesFor(screen))
+            occ[ws.index + 1] = ws.windows.length > 0;
         return occ;
     }
     readonly property int groupOffset: Math.floor((activeWsId - 1) / Config.bar.workspaces.shown) * Config.bar.workspaces.shown
 
-    property real blur: onSpecial ? 1 : 0
+    property real blur: 0
 
     implicitWidth: Tokens.sizes.bar.innerWidth
     implicitHeight: layout.implicitHeight + Tokens.padding.small
@@ -72,6 +75,7 @@ StyledClippingRect {
                 model: Config.bar.workspaces.shown
 
                 Workspace {
+                    screen: root.screen
                     activeWsId: root.activeWsId
                     occupied: root.occupied
                     groupOffset: root.groupOffset
@@ -96,41 +100,10 @@ StyledClippingRect {
             anchors.fill: layout
             onClicked: event => {
                 const ws = (layout.childAt(event.x, event.y) as Workspace)?.ws;
-                if (!ws)
+                if (!ws || root.activeWsId === ws)
                     return;
-                if (Hypr.activeWsId !== ws)
-                    Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ workspace = "${ws}" })` : `workspace ${ws}`);
-                else
-                    Hypr.dispatch(Hypr.usingLua ? 'hl.dsp.workspace.toggle_special("special")' : "togglespecialworkspace special");
+                Hypr.switchWorkspace(root.screen, ws - 1);
             }
-        }
-
-        Behavior on scale {
-            Anim {}
-        }
-
-        Behavior on opacity {
-            Anim {
-                type: Anim.DefaultEffects
-            }
-        }
-    }
-
-    Loader {
-        id: specialWs
-
-        asynchronous: true
-
-        anchors.fill: parent
-        anchors.margins: Tokens.padding.extraSmall
-
-        active: opacity > 0
-
-        scale: root.onSpecial ? 1 : 0.5
-        opacity: root.onSpecial ? 1 : 0
-
-        sourceComponent: SpecialWorkspaces {
-            screen: root.screen
         }
 
         Behavior on scale {

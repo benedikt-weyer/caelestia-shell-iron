@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import Quickshell.Wayland
 import Quickshell.Widgets
 import Caelestia.Config
 import qs.components
@@ -34,7 +33,7 @@ Item {
                 asynchronous: true
                 Layout.alignment: Qt.AlignVCenter
                 implicitSize: details.implicitHeight
-                source: Icons.getAppIcon(Hypr.activeToplevel?.lastIpcObject.class ?? "", "image-missing")
+                source: Icons.getAppIcon(Hypr.activeToplevel?.appId ?? "", "image-missing")
             }
 
             ColumnLayout {
@@ -52,7 +51,7 @@ Item {
 
                 StyledText {
                     Layout.fillWidth: true
-                    text: Hypr.activeToplevel?.lastIpcObject.class ?? ""
+                    text: Hypr.activeToplevel?.appId ?? ""
                     color: Colours.palette.m3onSurfaceVariant
                     elide: Text.ElideRight
                 }
@@ -83,17 +82,20 @@ Item {
         }
 
         ClippingWrapperRectangle {
-            color: "transparent"
+            // Live previews need a compositor protocol ironland-copositor
+            // doesn't implement yet (see the port notes) - a larger app
+            // icon stands in for now.
+            color: Colours.tPalette.m3surfaceContainer
             radius: Tokens.rounding.medium
 
-            ScreencopyView {
-                id: preview
+            implicitWidth: Tokens.sizes.bar.windowPreviewSize
+            implicitHeight: Tokens.sizes.bar.windowPreviewSize
 
-                captureSource: Hypr.activeToplevel?.wayland ?? null // qmllint disable unresolved-type
-                live: visible
-
-                constraintSize.width: Tokens.sizes.bar.windowPreviewSize
-                constraintSize.height: Tokens.sizes.bar.windowPreviewSize
+            IconImage {
+                anchors.centerIn: parent
+                asynchronous: true
+                implicitSize: parent.implicitWidth * 0.5
+                source: Icons.getAppIcon(Hypr.activeToplevel?.appId ?? "", "image-missing")
             }
         }
     }

@@ -26,7 +26,7 @@ Singleton {
 
     function getMonitor(query: string): var {
         if (query === "active") {
-            return monitors.find(m => Hypr.monitorFor(m.modelData)?.focused); // qmllint disable missing-property
+            return monitors.find(m => m.modelData === Hypr.focusedMonitor); // qmllint disable missing-property
         }
 
         if (query.startsWith("model:")) {
@@ -39,9 +39,11 @@ Singleton {
             return monitors.find(m => m.modelData.serialNumber === serial); // qmllint disable missing-property
         }
 
+        // "id:" queried a Hyprland-assigned numeric monitor id, which has
+        // no equivalent now (a ShellScreen only has a name) - unreachable,
+        // matching nothing rather than silently doing something else.
         if (query.startsWith("id:")) {
-            const id = parseInt(query.slice(3), 10);
-            return monitors.find(m => Hypr.monitorFor(m.modelData)?.id === id); // qmllint disable missing-property
+            return undefined;
         }
 
         return monitors.find(m => m.modelData.name === query); // qmllint disable missing-property

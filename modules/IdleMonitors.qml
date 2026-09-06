@@ -32,7 +32,11 @@ Scope {
         else if (action === "unlock")
             lock.lock.locked = false;
         else if (typeof action === "string")
-            Hypr.dispatch(Hypr.usingLua && ["dpms off", "dpms on"].includes(action) ? `hl.dsp.dpms({ action = "${action === "dpms off" ? "disable" : "enable"}" })` : action);
+            // DPMS needs wlr-output-power-management-unstable-v1, which
+            // ironland-copositor doesn't implement yet (see the port
+            // notes) - every other string action used to go straight to
+            // Hyprland's dispatcher, which no longer exists either.
+            console.warn("IdleMonitors: string idle action unsupported under ironland-copositor, ignoring:", action);
         else if (!SessionManager.exec(action))
             Quickshell.execDetached(action);
     }

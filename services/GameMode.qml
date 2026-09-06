@@ -7,51 +7,33 @@ import Caelestia
 import Caelestia.Config
 import qs.services
 
+// Used to also push `animations:enabled`/`blur:enabled`/gaps/border/rounding
+// overrides into Hyprland's own live config (and restore them with a
+// `reload` on exit) - pure Hyprland config automation with no equivalent
+// under ironland-copositor, so this is now just a local toggle other QML
+// (e.g. DesktopClock's own background blur) can react to for its own
+// visual effects, with no compositor-side effect of its own.
 Singleton {
     id: root
 
     property alias enabled: props.enabled
 
-    function setDynamicConfs(): void {
-        Hypr.extras.applyOptions({
-            "animations:enabled": 0,
-            "decoration:shadow:enabled": 0,
-            "decoration:blur:enabled": 0,
-            "general:gaps_in": 0,
-            "general:gaps_out": 0,
-            "general:border_size": 1,
-            "decoration:rounding": 0,
-            "general:allow_tearing": 1
-        });
-    }
-
     onEnabledChanged: {
         if (enabled) {
-            setDynamicConfs();
             if (GlobalConfig.utilities.toasts.gameModeChanged)
-                Toaster.toast(qsTr("Game mode enabled"), qsTr("Disabled Hyprland animations, blur, gaps and shadows"), "gamepad");
+                Toaster.toast(qsTr("Game mode enabled"), qsTr("Reduced shell visual effects"), "gamepad");
         } else {
-            Hypr.extras.message("reload");
             if (GlobalConfig.utilities.toasts.gameModeChanged)
-                Toaster.toast(qsTr("Game mode disabled"), qsTr("Hyprland settings restored"), "gamepad");
+                Toaster.toast(qsTr("Game mode disabled"), qsTr("Shell visual effects restored"), "gamepad");
         }
     }
 
     PersistentProperties {
         id: props
 
-        property bool enabled: Hypr.options["animations:enabled"] === 0 // qmllint disable missing-property
+        property bool enabled: false
 
         reloadableId: "gameMode"
-    }
-
-    Connections {
-        function onConfigReloaded(): void {
-            if (props.enabled)
-                root.setDynamicConfs();
-        }
-
-        target: Hypr
     }
 
     IpcHandler {
