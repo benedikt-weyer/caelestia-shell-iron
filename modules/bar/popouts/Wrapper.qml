@@ -2,9 +2,9 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Wayland
 import Caelestia.Config
+import Caelestia.Wayland
 import qs.components
 import qs.services
 import qs.modules.nexus
@@ -90,9 +90,9 @@ Item {
         onDetachRequested: mode => root.detach(mode)
     }
 
-    HyprlandFocusGrab {
+    IronlandFocusGrab {
         active: root.isDetached
-        windows: [QsWindow.window]
+        window: QsWindow.window
         onCleared: root.close()
     }
 

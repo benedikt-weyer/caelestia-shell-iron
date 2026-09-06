@@ -1,7 +1,6 @@
-import Quickshell.Hyprland
+import Caelestia.Wayland
 
 // qmllint disable unresolved-type
-GlobalShortcut {
+IronlandShortcut {
     // qmllint enable unresolved-type
-    appid: "caelestia"
 }

@@ -8,6 +8,7 @@ import Quickshell.Hyprland
 import Quickshell.Wayland
 import Caelestia.Blobs
 import Caelestia.Config
+import Caelestia.Wayland
 import qs.components
 import qs.components.containers
 import qs.services
@@ -109,7 +110,7 @@ StyledWindow {
         win: root
     }
 
-    HyprlandFocusGrab {
+    IronlandFocusGrab {
         id: focusGrab
 
         active: {
@@ -123,7 +124,7 @@ StyledWindow {
                 return true;
             return false;
         }
-        windows: [root]
+        window: root
         onCleared: {
             root.screenState.launcher = false;
             root.screenState.session = false;

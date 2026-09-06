@@ -1,4 +1,4 @@
-find_package(Qt6 REQUIRED COMPONENTS ShaderTools Core Qml Gui Quick QuickControls2 Concurrent Sql Network DBus)
+find_package(Qt6 REQUIRED COMPONENTS ShaderTools Core Qml Gui GuiPrivate Quick QuickControls2 Concurrent Sql Network DBus WaylandClient)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(Qalculate IMPORTED_TARGET libqalculate REQUIRED)
 pkg_check_modules(Pipewire IMPORTED_TARGET libpipewire-0.3 REQUIRED)
@@ -14,6 +14,7 @@ qt_standard_project_setup(REQUIRES 6.9)
 
 include(cmake/pch.cmake)
 include(cmake/qml-module.cmake)
+include(cmake/wayland-protocol.cmake)
 
 # Header only helpers
 add_library(caelestia-util INTERFACE)
