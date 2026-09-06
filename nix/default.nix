@@ -13,12 +13,13 @@
   wl-clipboard,
   libqalculate,
   bash,
-  hyprland,
   material-symbols,
   rubik,
   nerd-fonts,
   qt6,
   quickshell,
+  wayland,
+  wayland-protocols,
   aubio,
   libcava,
   fftw,
@@ -48,7 +49,6 @@
       wl-clipboard
       libqalculate
       bash
-      hyprland
     ]
     ++ extraRuntimeDeps
     ++ lib.optional withCli caelestia-cli;
@@ -95,7 +95,12 @@
     };
 
     nativeBuildInputs = [cmake ninja pkg-config];
-    buildInputs = [qt6.qtbase qt6.qtdeclarative qt6.qtshadertools libqalculate pipewire aubio libcava fftw lm_sensors];
+    # qt6.qtwayland (Qt6WaylandClient + qtwaylandscanner) and wayland/
+    # wayland-protocols (Wayland::Scanner) are for Caelestia.Wayland (see
+    # plugin/src/Caelestia/Wayland) - the shell's own client bindings for
+    # ironland-copositor's `ironland-shortcuts-v1`/`ironland-focus-grab-v1`,
+    # generated from the XML under plugin/protocols at build time.
+    buildInputs = [qt6.qtbase qt6.qtdeclarative qt6.qtshadertools qt6.qtwayland wayland wayland-protocols libqalculate pipewire aubio libcava fftw lm_sensors];
 
     dontWrapQtApps = true;
     cmakeFlags =
