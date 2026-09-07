@@ -15,13 +15,12 @@ QtObject {
         },
 
         // Connectivity
-        // TODO
-        // {
-        //     label: qsTr("Display"),
-        //     icon: "monitor",
-        //     description: qsTr("Output configuration"),
-        //     category: "connectivity"
-        // },
+        {
+            label: qsTr("Displays"),
+            icon: "monitor",
+            description: qsTr("Output configuration"),
+            category: "connectivity"
+        },
         {
             label: qsTr("Network"),
             icon: "wifi",
@@ -43,6 +42,12 @@ QtObject {
         },
 
         // System
+        {
+            label: qsTr("Compositor"),
+            icon: "settings_applications",
+            description: qsTr("Keyboard, shortcuts, workspaces, focus"),
+            category: "system"
+        },
         {
             label: qsTr("Updates"),
             icon: "update",
