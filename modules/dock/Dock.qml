@@ -359,7 +359,7 @@ Variants {
         RowLayout {
             Layout.alignment: Qt.AlignHCenter
             spacing: 3
-            visible: icon.group.windows.length > 1
+            visible: icon.group.windows.length > 0
 
             Repeater {
                 model: Math.min(icon.group.windows.length, 4)
