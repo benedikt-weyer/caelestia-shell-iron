@@ -194,5 +194,17 @@ PageBase {
             checked: !Colours.light
             onToggled: Colours.setMode(checked ? "dark" : "light")
         }
+
+        StepperRow {
+            first: true
+            last: true
+            label: qsTr("Screen corner radius")
+            subtext: qsTr("Roundness of the screen's outer border")
+            value: Config.border.rounding
+            from: 0
+            to: 60
+            stepSize: 1
+            onMoved: v => GlobalConfig.border.rounding = v
+        }
     }
 }
