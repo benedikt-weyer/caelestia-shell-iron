@@ -539,6 +539,11 @@ For example, to automatically hide the bar on the monitor named `DP-1`:
         ],
         "excludedScreens": []
     },
+    "dock": {
+        "enabled": false,
+        "iconSize": 28,
+        "excludedScreens": []
+    },
     "border": {
         "thickness": 10,
         "rounding": 25,

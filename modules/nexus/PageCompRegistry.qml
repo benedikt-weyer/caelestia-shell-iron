@@ -139,6 +139,9 @@ QtObject {
                 Component {
                     BarClock {}
                 }
+                Component {
+                    BarDock {}
+                }
             }
         },
         Component {

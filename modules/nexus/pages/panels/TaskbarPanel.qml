@@ -69,6 +69,13 @@ PageBase {
         }
 
         NavRow {
+            icon: "dock_to_bottom"
+            text: qsTr("Dock")
+            subtext: qsTr("Running app icons, enable/disable")
+            onClicked: root.nState.openSubPage(11)
+        }
+
+        NavRow {
             icon: "widgets"
             text: qsTr("Tray")
             subtext: qsTr("System tray icons")
