@@ -11,4 +11,10 @@ cd "$repo_root"
 
 cmake --build build
 
-exec qs -n -p build/qml "$@"
+# The C++ plugin (import Caelestia) lives under build/qml; the shell QML tree
+# (shell.qml, modules/, services/, utils/, components/, assets/) is only
+# staged into build/qml by `cmake --install`, so run straight from the repo
+# root and just point the plugin import path at the build dir.
+export QML2_IMPORT_PATH="$repo_root/build/qml${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}"
+
+exec qs -n -p "$repo_root" "$@"
