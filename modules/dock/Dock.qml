@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Wayland
 import Quickshell.Widgets
 import Caelestia.Config
 import qs.components
@@ -88,6 +89,13 @@ Variants {
 
         screen: modelData
         name: "dock"
+        // Space for the dock is reserved by a dedicated exclusion window
+        // instead (see modules/drawers/Exclusions.qml), same as the bar on
+        // the left - otherwise this window's own auto-computed exclusive
+        // zone would stack with that one's on the same (bottom) edge, and
+        // this surface would end up positioned short of the actual screen
+        // edge by the latter's reservation.
+        WlrLayershell.exclusionMode: ExclusionMode.Ignore
 
         anchors.bottom: true
         anchors.left: true

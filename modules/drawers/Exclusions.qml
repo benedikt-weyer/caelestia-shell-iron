@@ -11,6 +11,7 @@ Scope {
 
     required property ShellScreen screen
     required property Bar.BarWrapper bar
+    required property real dockHeight
 
     ExclusionZone {
         anchors.left: true
@@ -27,6 +28,15 @@ Scope {
 
     ExclusionZone {
         anchors.bottom: true
+        // The dock (see modules/dock) is its own real layer-shell surface
+        // rather than an item drawn inside this one, but it doesn't reserve
+        // its own exclusive zone (see its exclusionMode) - so this is the
+        // only thing reserving space for it, same as the bar on the left.
+        // Without this, both it and the dock reserving space on the same
+        // edge would stack, leaving the dock's surface (and the border shape
+        // drawn around it) sized correctly but positioned short of the
+        // actual screen edge.
+        exclusiveZone: root.dockHeight
     }
 
     component ExclusionZone: StyledWindow {
