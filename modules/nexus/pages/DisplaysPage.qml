@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import Caelestia.Config
 import qs.components
+import qs.components.controls
 import qs.services
 import qs.modules.nexus.common
 import qs.modules.nexus.pages.compositor
