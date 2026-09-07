@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Widgets
 import Caelestia.Config
 import qs.components
 import qs.components.containers
@@ -110,16 +111,11 @@ Variants {
             implicitWidth: icon.iconSize
             implicitHeight: icon.iconSize
 
-            MaterialIcon {
+            IconImage {
                 anchors.centerIn: parent
-                animate: true
-                text: Icons.getAppCategoryIcon(icon.group.appId, "desktop_windows")
-                color: icon.active ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
-                fontStyle: Tokens.font.icon.size(icon.iconSize * 0.6).build()
-
-                Behavior on color {
-                    CAnim {}
-                }
+                asynchronous: true
+                implicitSize: icon.iconSize
+                source: Icons.getAppIcon(icon.group.appId, "image-missing")
             }
 
             MouseArea {
