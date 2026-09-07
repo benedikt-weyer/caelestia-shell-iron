@@ -542,6 +542,7 @@ For example, to automatically hide the bar on the monitor named `DP-1`:
     },
     "dock": {
         "enabled": false,
+        "showBackground": true,
         "iconSize": 28,
         "excludedScreens": [],
         "pinnedApps": []

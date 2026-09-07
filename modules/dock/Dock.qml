@@ -21,6 +21,7 @@ Variants {
         required property ShellScreen modelData
 
         readonly property int iconSize: contentItem.Config.dock.iconSize
+        readonly property bool showBackground: contentItem.Config.dock.showBackground
         // The DockIcon currently showing its context menu, or null. Kept here
         // (rather than one popup per icon) so opening a menu always closes
         // whichever other one was open.
@@ -88,7 +89,7 @@ Variants {
             anchors.bottom: parent.bottom
 
             radius: Tokens.rounding.extraLarge
-            color: Colours.tPalette.m3surfaceContainer
+            color: win.showBackground ? Colours.tPalette.m3surfaceContainer : "transparent"
 
             width: row.implicitWidth + Tokens.padding.large * 2
             height: row.implicitHeight + Tokens.padding.small * 2

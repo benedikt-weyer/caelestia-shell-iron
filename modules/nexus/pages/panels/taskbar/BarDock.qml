@@ -24,6 +24,13 @@ PageBase {
             onToggled: GlobalConfig.dock.enabled = checked
         }
 
+        ToggleRow {
+            text: qsTr("Background")
+            subtext: qsTr("Show a background pill behind the dock icons")
+            checked: Config.dock.showBackground
+            onToggled: GlobalConfig.dock.showBackground = checked
+        }
+
         StepperRow {
             last: true
             label: qsTr("Icon size")
