@@ -21,6 +21,10 @@ Variants {
         required property ShellScreen modelData
 
         readonly property int iconSize: contentItem.Config.dock.iconSize
+        // The DockIcon currently showing its context menu, or null. Kept here
+        // (rather than one popup per icon) so opening a menu always closes
+        // whichever other one was open.
+        property var menuTarget: null
         // Pinned apps are always shown (even with no window on this screen, in
         // which case clicking launches a new instance) and always come first,
         // in pinned order; any other running app follows in discovery order.
@@ -101,9 +105,104 @@ Variants {
                     DockIcon {
                         required property var modelData
 
+                        dock: win
                         group: modelData
                         pinned: modelData.pinned
                         iconSize: win.iconSize
+                    }
+                }
+            }
+        }
+
+        PopupWindow {
+            id: contextMenu
+
+            readonly property var target: win.menuTarget
+            readonly property list<MenuItem> menuItems: target ? (target.group.windows.length > 0 ? [target.openItem, target.pinItem, target.quitItem] : [target.openItem, target.pinItem]) : []
+
+            visible: target !== null
+            color: "transparent"
+
+            anchor.item: target?.anchorItem ?? null
+            anchor.edges: Edges.Top
+            anchor.gravity: Edges.Top
+            anchor.adjustment: PopupAdjustment.Slide | PopupAdjustment.Flip
+            anchor.margins.bottom: Tokens.spacing.small
+
+            grabFocus: true
+
+            implicitWidth: Math.max(180, column.implicitWidth + column.anchors.margins * 2)
+            implicitHeight: column.implicitHeight + column.anchors.margins * 2
+
+            onVisibleChanged: {
+                if (!visible)
+                    win.menuTarget = null;
+            }
+
+            Item {
+                anchors.fill: parent
+                focus: contextMenu.visible
+
+                Keys.onEscapePressed: win.menuTarget = null
+
+                StyledRect {
+                    anchors.fill: parent
+                    radius: Tokens.rounding.large
+                    color: Colours.palette.m3surfaceContainerLow
+
+                    ColumnLayout {
+                        id: column
+
+                        anchors.fill: parent
+                        anchors.margins: Tokens.padding.extraSmall
+                        spacing: 0
+
+                        Repeater {
+                            model: contextMenu.menuItems
+
+                            StyledRect {
+                                id: menuRow
+
+                                required property MenuItem modelData
+                                required property int index
+
+                                Layout.fillWidth: true
+                                implicitWidth: menuRowLayout.implicitWidth + Tokens.padding.medium * 2
+                                implicitHeight: menuRowLayout.implicitHeight + Tokens.padding.medium * 2
+
+                                radius: Tokens.rounding.extraSmall
+                                color: "transparent"
+
+                                StateLayer {
+                                    color: Colours.palette.m3onSurface
+                                    onClicked: {
+                                        menuRow.modelData.clicked();
+                                        win.menuTarget = null;
+                                    }
+                                }
+
+                                RowLayout {
+                                    id: menuRowLayout
+
+                                    anchors.fill: parent
+                                    anchors.margins: Tokens.padding.medium
+                                    spacing: Tokens.spacing.small
+
+                                    MaterialIcon {
+                                        Layout.alignment: Qt.AlignVCenter
+                                        text: menuRow.modelData.icon
+                                        color: Colours.palette.m3onSurfaceVariant
+                                    }
+
+                                    StyledText {
+                                        Layout.alignment: Qt.AlignVCenter
+                                        Layout.fillWidth: true
+                                        text: menuRow.modelData.text
+                                        color: Colours.palette.m3onSurface
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -113,9 +212,15 @@ Variants {
     component DockIcon: ColumnLayout {
         id: icon
 
+        required property var dock
         required property var group
         required property bool pinned
         required property int iconSize
+
+        readonly property alias anchorItem: iconRoot
+        readonly property alias openItem: openItem
+        readonly property alias pinItem: pinItem
+        readonly property alias quitItem: quitItem
 
         readonly property bool active: group.windows.some(w => w.activated)
 
@@ -170,7 +275,7 @@ Variants {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: mouse => {
                     if (mouse.button === Qt.RightButton)
-                        menu.expanded = !menu.expanded;
+                        icon.dock.menuTarget = icon.dock.menuTarget === icon ? null : icon;
                     else
                         icon.primaryAction();
                 }
@@ -201,17 +306,6 @@ Variants {
                 text: qsTr("Quit")
 
                 onClicked: icon.quit()
-            }
-
-            Menu {
-                id: menu
-
-                attachTo: iconRoot
-                attachSideY: Menu.Top
-                thisSideY: Menu.Bottom
-                marginY: -Tokens.spacing.small
-
-                items: icon.group.windows.length > 0 ? [openItem, pinItem, quitItem] : [openItem, pinItem]
             }
         }
 
