@@ -33,10 +33,7 @@ Variants {
             const pinned = GlobalConfig.dock.pinnedApps;
 
             const running = [];
-            for (const t of Hypr.toplevels.values) {
-                if (Hypr.isToplevelIgnored(t) || !t.screens.includes(win.modelData))
-                    continue;
-
+            for (const t of Hypr.toplevelsForScreen(win.modelData)) {
                 const group = running.find(g => g.appId === t.appId);
                 if (group)
                     group.windows.push(t);
