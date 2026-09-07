@@ -12,4 +12,19 @@
 # can '#include' the raw header by its plain name.
 function(caelestia_add_wayland_protocol target)
     qt6_generate_wayland_protocol_client_sources(${target} ${ARGN})
+
+    cmake_parse_arguments(arg "" "" "FILES" ${ARGN})
+    get_target_property(target_binary_dir ${target} BINARY_DIR)
+
+    # The raw libwayland client bindings are plain C, generated into
+    # <target>'s binary dir - keep them out of <target>'s (C++-only) PCH so
+    # CMake doesn't try to instantiate a C-language PCH from C++ headers.
+    foreach(protocol_file IN LISTS arg_FILES)
+        get_filename_component(protocol_name "${protocol_file}" NAME_WLE)
+        set_source_files_properties(
+            "${target_binary_dir}/wayland-${protocol_name}-client-protocol.h"
+            "${target_binary_dir}/wayland-${protocol_name}-protocol.c"
+            PROPERTIES SKIP_PRECOMPILE_HEADERS ON
+        )
+    endforeach()
 endfunction()
