@@ -292,6 +292,7 @@ StyledWindow {
 
             anchors.top: parent.top
             anchors.bottom: parent.bottom
+            anchors.bottomMargin: root.dockHeight
 
             screen: root.screen
             screenState: root.screenState
