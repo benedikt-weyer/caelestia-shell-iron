@@ -90,6 +90,74 @@ PageBase {
         }
 
         SectionHeader {
+            text: qsTr("Gaps")
+        }
+
+        StepperRow {
+            first: true
+            label: qsTr("Gap between windows")
+            value: root.cfg?.gaps.inner ?? 8
+            from: 0
+            to: 64
+            stepSize: 1
+            onMoved: v => IronlandCtl.setValue("gaps.inner", String(v))
+        }
+
+        StepperRow {
+            last: true
+            label: qsTr("Gap to screen edge")
+            value: root.cfg?.gaps.outer ?? 0
+            from: 0
+            to: 64
+            stepSize: 1
+            onMoved: v => IronlandCtl.setValue("gaps.outer", String(v))
+        }
+
+        SectionHeader {
+            text: qsTr("Focus border")
+        }
+
+        ToggleRow {
+            first: true
+            text: qsTr("Highlight the focused window")
+            checked: root.cfg?.border.enabled ?? false
+            onToggled: IronlandCtl.setValue("border.enabled", checked ? "true" : "false")
+        }
+
+        StepperRow {
+            label: qsTr("Border thickness")
+            value: root.cfg?.border.thickness ?? 2
+            from: 1
+            to: 32
+            stepSize: 1
+            onMoved: v => IronlandCtl.setValue("border.thickness", String(v))
+        }
+
+        TextFieldRow {
+            label: qsTr("Colour")
+            subtext: qsTr("#rrggbb or #rrggbbaa")
+            value: root.cfg?.border.color ?? "#89b4fa"
+            onEditingFinished: v => IronlandCtl.setValue("border.color", v)
+        }
+
+        TextFieldRow {
+            label: qsTr("Gradient colour")
+            subtext: qsTr("Empty = solid colour")
+            value: root.cfg?.border.gradient_color ?? ""
+            onEditingFinished: v => v ? IronlandCtl.setValue("border.gradient_color", v) : IronlandCtl.unsetValue("border.gradient_color")
+        }
+
+        StepperRow {
+            last: true
+            label: qsTr("Gradient angle")
+            value: root.cfg?.border.angle ?? 45
+            from: 0
+            to: 360
+            stepSize: 5
+            onMoved: v => IronlandCtl.setValue("border.angle", String(v))
+        }
+
+        SectionHeader {
             text: qsTr("Cursor")
         }
 
