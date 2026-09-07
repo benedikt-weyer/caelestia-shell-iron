@@ -345,31 +345,26 @@ Variants {
 
         StyledRect {
             Layout.alignment: Qt.AlignHCenter
-            Layout.preferredWidth: icon.iconSize * 0.5
-            Layout.preferredHeight: 3
-            radius: 1.5
-            color: Colours.palette.m3primary
-            opacity: icon.active ? 1 : 0
+            Layout.preferredWidth: icon.active ? icon.iconSize * 0.5 : 4
+            Layout.preferredHeight: icon.active ? 3 : 4
+            radius: icon.active ? 1.5 : 2
+            color: icon.active ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+            opacity: icon.group.windows.length > 0 ? 1 : 0
+
+            Behavior on Layout.preferredWidth {
+                Anim {}
+            }
+
+            Behavior on Layout.preferredHeight {
+                Anim {}
+            }
+
+            Behavior on radius {
+                Anim {}
+            }
 
             Behavior on opacity {
                 Anim {}
-            }
-        }
-
-        RowLayout {
-            Layout.alignment: Qt.AlignHCenter
-            spacing: 3
-            visible: icon.group.windows.length > 0
-
-            Repeater {
-                model: Math.min(icon.group.windows.length, 4)
-
-                StyledRect {
-                    implicitWidth: 4
-                    implicitHeight: 4
-                    radius: 2
-                    color: Colours.palette.m3onSurfaceVariant
-                }
             }
         }
     }
