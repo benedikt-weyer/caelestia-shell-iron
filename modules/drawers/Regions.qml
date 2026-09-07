@@ -17,8 +17,15 @@ Region {
 
     x: bar.clampedWidth + win.dragMaskPadding
     y: clampedThickness + win.dragMaskPadding
-    width: win.width - bar.clampedWidth - clampedThickness - win.dragMaskPadding * 2
-    height: win.height - clampedThickness * 2 - win.dragMaskPadding * 2
+    // Right/bottom reach the true screen edge rather than also stopping
+    // clampedThickness short like the top does, since (unlike the top, where
+    // interactive content already starts no earlier than the border anyway)
+    // the right/bottom hover-reveal triggers (sidebar, osd, session, launcher,
+    // utilities) are designed to react all the way to the screen edge - a
+    // matching input dead zone there meant hovering right at the edge did
+    // nothing until the cursor moved a few pixels inward.
+    width: win.width - x
+    height: win.height - y
     intersection: Intersection.Xor
 
     R {
