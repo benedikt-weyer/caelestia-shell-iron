@@ -48,11 +48,14 @@ public:
 
 signals:
     void nameChanged();
-    void pressed();
+    // `output` is the wl_output name (e.g. "eDP-1") the pointer was over
+    // when the shortcut fired, or an empty string if the compositor
+    // couldn't determine one.
+    void pressed(const QString& output);
     void released();
 
 protected:
-    void ironland_shortcut_v1_pressed() override;
+    void ironland_shortcut_v1_pressed(const QString& output) override;
     void ironland_shortcut_v1_released() override;
 
 private:

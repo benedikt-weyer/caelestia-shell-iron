@@ -3,7 +3,7 @@
 namespace caelestia::wayland {
 
 IronlandShortcutsManager::IronlandShortcutsManager()
-    : QWaylandClientExtensionTemplate<IronlandShortcutsManager>(1) {}
+    : QWaylandClientExtensionTemplate<IronlandShortcutsManager>(2) {}
 
 IronlandShortcutsManager* IronlandShortcutsManager::instance() {
     static IronlandShortcutsManager manager;
@@ -49,8 +49,8 @@ void IronlandShortcut::tryRegister() {
     init(manager->get_shortcut(m_name));
 }
 
-void IronlandShortcut::ironland_shortcut_v1_pressed() {
-    emit pressed();
+void IronlandShortcut::ironland_shortcut_v1_pressed(const QString& output) {
+    emit pressed(output);
 }
 
 void IronlandShortcut::ironland_shortcut_v1_released() {

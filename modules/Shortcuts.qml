@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Caelestia
+import qs.components
 import qs.components.misc
 import qs.services
 import qs.modules.nexus
@@ -10,7 +11,19 @@ Scope {
     id: root
 
     property bool launcherInterrupted
+    // Captured from the "launcher" shortcut's onPressed (see below) so the
+    // toggle - which only happens on release, to allow interrupting a tap -
+    // still opens on whichever output had the pointer at press time.
+    property string launcherOutputName
     readonly property bool hasFullscreen: Hypr.toplevels.values.some(t => t.fullscreen && t.screens.includes(Hypr.focusedMonitor))
+
+    // The screen the "launcher" shortcut should open on: wherever the
+    // pointer was when it fired, falling back to the focused screen if the
+    // compositor couldn't tell us (or that output is no longer connected).
+    function launcherScreen(): ScreenState {
+        const screen = Quickshell.screens.find(s => s.name === root.launcherOutputName);
+        return (screen && ShellState.forScreen(screen)) ?? ShellState.forActive();
+    }
 
     // qmllint disable unresolved-type
     CustomShortcut {
@@ -64,10 +77,13 @@ Scope {
         // qmllint enable unresolved-type
         name: "launcher"
         description: "Toggle launcher"
-        onPressed: root.launcherInterrupted = false
+        onPressed: output => {
+            root.launcherInterrupted = false;
+            root.launcherOutputName = output;
+        }
         onReleased: {
             if (!root.launcherInterrupted && !root.hasFullscreen) {
-                const screenState = ShellState.forActive();
+                const screenState = root.launcherScreen();
                 screenState.launcher = !screenState.launcher;
             }
             root.launcherInterrupted = false;
