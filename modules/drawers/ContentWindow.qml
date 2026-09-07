@@ -30,6 +30,7 @@ StyledWindow {
     readonly property real borderRounding: contentItem.Config.border.rounding * (1 - fsTransitionProg)
     readonly property real shadowOpacity: 0.7 * (1 - fsTransitionProg)
     readonly property real borderLayoutThickness: hasFullscreen ? 0 : contentItem.Config.border.thickness
+    readonly property real dockHeight: ShellState.componentsFor(root.screen)?.dock?.implicitHeight ?? root.borderThickness
 
     property color surfaceColour: Colours.tPalette.m3surface
 
@@ -160,7 +161,7 @@ StyledWindow {
             borderLeft: bar.implicitWidth - anchors.margins - root.sdfBorderOffset
             borderRight: root.borderThickness - anchors.margins - root.sdfBorderOffset
             borderTop: root.borderThickness - anchors.margins - root.sdfBorderOffset
-            borderBottom: root.borderThickness - anchors.margins - root.sdfBorderOffset
+            borderBottom: root.dockHeight - anchors.margins - root.sdfBorderOffset
         }
 
         PanelBg {
@@ -255,6 +256,7 @@ StyledWindow {
             screenState: root.screenState
             bar: bar
             borderThickness: root.borderThickness
+            dockHeight: root.dockHeight
 
             utilities.horizontalStretch: (sidebarBg.rawDeformMatrix.m11 - 1) / 2 + 1
             utilities.deformMatrix: utilsBg.rawDeformMatrix

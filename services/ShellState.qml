@@ -66,6 +66,7 @@ Singleton {
         property var rootWindow
         property var interactionWrapper
         property var bar
+        property var dock
         property var panels
 
         function find(name: string, rootItem: Item): var {

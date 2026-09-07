@@ -51,6 +51,12 @@ Variants {
             height: content.height
         }
 
+        ShellState.ComponentRef {
+            screen: win.modelData
+            slot: "dock"
+            component: win
+        }
+
         StyledRect {
             id: content
 

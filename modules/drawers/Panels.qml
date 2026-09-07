@@ -20,6 +20,7 @@ Item {
     required property ScreenState screenState
     required property Bar.BarWrapper bar
     required property real borderThickness
+    required property real dockHeight
 
     readonly property alias osd: osd
     readonly property alias osdWrapper: osdWrapper
@@ -37,6 +38,7 @@ Item {
     anchors.fill: parent
     anchors.margins: borderThickness
     anchors.leftMargin: bar.implicitWidth
+    anchors.bottomMargin: dockHeight
 
     Item {
         id: osdWrapper
