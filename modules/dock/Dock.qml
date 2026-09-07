@@ -96,7 +96,7 @@ Variants {
         implicitHeight: content.height + Tokens.padding.small * 2
         mask: Region {
             x: (win.width - content.width) / 2
-            y: win.height - content.height
+            y: (win.height - content.height) / 2
             width: content.width
             height: content.height
         }
@@ -111,7 +111,7 @@ Variants {
             id: content
 
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: parent.bottom
+            anchors.verticalCenter: parent.verticalCenter
 
             radius: Tokens.rounding.extraLarge
             color: win.showBackground ? Colours.tPalette.m3surfaceContainer : "transparent"
