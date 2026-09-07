@@ -230,6 +230,7 @@ For example, to automatically hide the bar on the monitor named `DP-1`:
 > - `bar.tray`: `hiddenIcons`, `iconSubs`
 > - `bar.workspaces`: `ignoredTags`, `perMonitorWorkspaces`, `specialWorkspaceIcons`, `windowIcons`
 > - `dashboard`: `mediaUpdateInterval`, `resourceUpdateInterval`
+> - `dock`: `pinnedApps`
 > - `general`: `apps.*`, `battery.*`, `idle.*`, `logo`
 > - `launcher`: `actionPrefix`, `actions`, `enableDangerousActions`, `favouriteApps`, `hiddenApps`, `specialPrefix`, `useFuzzy.*`, `vimKeybinds`
 > - `lock`: `enableFprint`, `enableHowdy`, `maxFprintTries`, `maxHowdyTries`, `triggerHowdyOnWake`
@@ -542,7 +543,8 @@ For example, to automatically hide the bar on the monitor named `DP-1`:
     "dock": {
         "enabled": false,
         "iconSize": 28,
-        "excludedScreens": []
+        "excludedScreens": [],
+        "pinnedApps": []
     },
     "border": {
         "thickness": 10,

@@ -7,8 +7,10 @@ import Quickshell.Widgets
 import Caelestia.Config
 import qs.components
 import qs.components.containers
+import qs.components.controls
 import qs.services
 import qs.utils
+import qs.modules.launcher.services
 
 Variants {
     model: Screens.screens.filter(s => GlobalConfig.forScreen(s.name).dock.enabled && !Strings.testRegexList(GlobalConfig.forScreen(s.name).dock.excludedScreens, s.name))
@@ -19,22 +21,39 @@ Variants {
         required property ShellScreen modelData
 
         readonly property int iconSize: contentItem.Config.dock.iconSize
+        // Pinned apps are always shown (even with no window on this screen, in
+        // which case clicking launches a new instance) and always come first,
+        // in pinned order; any other running app follows in discovery order.
         readonly property var groups: {
-            const groups = [];
+            const pinned = GlobalConfig.dock.pinnedApps;
+
+            const running = [];
             for (const t of Hypr.toplevels.values) {
                 if (Hypr.isToplevelIgnored(t) || !t.screens.includes(win.modelData))
                     continue;
 
-                const group = groups.find(g => g.appId === t.appId);
+                const group = running.find(g => g.appId === t.appId);
                 if (group)
                     group.windows.push(t);
                 else
-                    groups.push({
+                    running.push({
                         appId: t.appId,
                         windows: [t]
                     });
             }
-            return groups;
+
+            const pinnedGroups = pinned.map(appId => ({
+                        appId: appId,
+                        windows: running.find(g => g.appId === appId)?.windows ?? [],
+                        pinned: true
+                    }));
+            const unpinnedGroups = running.filter(g => !pinned.includes(g.appId)).map(g => ({
+                        appId: g.appId,
+                        windows: g.windows,
+                        pinned: false
+                    }));
+
+            return pinnedGroups.concat(unpinnedGroups);
         }
 
         screen: modelData
@@ -83,6 +102,7 @@ Variants {
                         required property var modelData
 
                         group: modelData
+                        pinned: modelData.pinned
                         iconSize: win.iconSize
                     }
                 }
@@ -94,9 +114,17 @@ Variants {
         id: icon
 
         required property var group
+        required property bool pinned
         required property int iconSize
 
         readonly property bool active: group.windows.some(w => w.activated)
+
+        function primaryAction(): void {
+            if (group.windows.length > 0)
+                activate();
+            else
+                launch();
+        }
 
         function activate(): void {
             const idx = group.windows.findIndex(w => w.activated);
@@ -104,9 +132,27 @@ Variants {
             next.activate();
         }
 
+        function launch(): void {
+            const entry = DesktopEntries.byId(icon.group.appId);
+            if (entry)
+                Apps.launch(entry);
+        }
+
+        function togglePin(): void {
+            const pinnedApps = GlobalConfig.dock.pinnedApps;
+            GlobalConfig.dock.pinnedApps = icon.pinned ? pinnedApps.filter(a => a !== icon.group.appId) : [...pinnedApps, icon.group.appId];
+        }
+
+        function quit(): void {
+            for (const w of icon.group.windows)
+                w.close();
+        }
+
         spacing: Tokens.spacing.extraSmall / 2
 
         Item {
+            id: iconRoot
+
             Layout.alignment: Qt.AlignHCenter
             implicitWidth: icon.iconSize
             implicitHeight: icon.iconSize
@@ -120,8 +166,52 @@ Variants {
 
             MouseArea {
                 anchors.fill: parent
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
                 cursorShape: Qt.PointingHandCursor
-                onClicked: icon.activate()
+                onClicked: mouse => {
+                    if (mouse.button === Qt.RightButton)
+                        menu.expanded = !menu.expanded;
+                    else
+                        icon.primaryAction();
+                }
+            }
+
+            MenuItem {
+                id: openItem
+
+                icon: "open_in_new"
+                text: icon.group.windows.length > 0 ? qsTr("New window") : qsTr("Open")
+
+                onClicked: icon.launch()
+            }
+
+            MenuItem {
+                id: pinItem
+
+                icon: icon.pinned ? "keep_off" : "keep"
+                text: icon.pinned ? qsTr("Unpin from dock") : qsTr("Pin to dock")
+
+                onClicked: icon.togglePin()
+            }
+
+            MenuItem {
+                id: quitItem
+
+                icon: "close"
+                text: qsTr("Quit")
+
+                onClicked: icon.quit()
+            }
+
+            Menu {
+                id: menu
+
+                attachTo: iconRoot
+                attachSideY: Menu.Top
+                thisSideY: Menu.Bottom
+                marginY: -Tokens.spacing.small
+
+                items: icon.group.windows.length > 0 ? [openItem, pinItem, quitItem] : [openItem, pinItem]
             }
         }
 
