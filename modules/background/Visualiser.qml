@@ -15,7 +15,7 @@ Item {
     required property ShellScreen screen
     required property Item wallpaper
 
-    // "Floating" has no equivalent under ironland-copositor's protocol
+    // "Floating" has no equivalent under ironland-compositor's protocol
     // surface (see the port notes) - autoHide degrades to "hide whenever
     // the active workspace has any window at all", since none can ever be
     // floating.

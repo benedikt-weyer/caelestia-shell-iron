@@ -10,7 +10,7 @@ import qs.services
 // Used to also push `animations:enabled`/`blur:enabled`/gaps/border/rounding
 // overrides into Hyprland's own live config (and restore them with a
 // `reload` on exit) - pure Hyprland config automation with no equivalent
-// under ironland-copositor, so this is now just a local toggle other QML
+// under ironland-compositor, so this is now just a local toggle other QML
 // (e.g. DesktopClock's own background blur) can react to for its own
 // visual effects, with no compositor-side effect of its own.
 Singleton {

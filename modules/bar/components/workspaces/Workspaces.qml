@@ -15,7 +15,7 @@ StyledClippingRect {
     required property bool fullscreen
 
     // Special workspaces were a Hyprland-only concept with no equivalent
-    // under ironland-copositor's workspace model - always false/0 now, kept
+    // under ironland-compositor's workspace model - always false/0 now, kept
     // as properties so the bindings below don't need individual changes.
     readonly property bool onSpecial: false
     readonly property int activeWsId: (Hypr.workspacesFor(screen).find(w => w.active)?.index ?? 0) + 1

@@ -8,7 +8,7 @@ import qs.components
 import qs.services
 
 // Move-to-workspace/float/pin all dispatched by window address under
-// Hyprland; ironland-copositor's tiling model has no per-window address to
+// Hyprland; ironland-compositor's tiling model has no per-window address to
 // target and no protocol for any of the three (see the port notes), so
 // only Kill (a plain wlr-foreign-toplevel-management-v1 `close`) survives.
 ColumnLayout {

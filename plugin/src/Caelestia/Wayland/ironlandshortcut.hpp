@@ -27,7 +27,7 @@ private:
 
 // QML-facing shortcut, mirroring Quickshell.Hyprland's GlobalShortcut: set
 // `name` to match a key in the compositor's `[shortcuts]` config (as
-// `"shortcut:<name>"`, see ironland-copositor's config.rs), then listen for
+// `"shortcut:<name>"`, see ironland-compositor's config.rs), then listen for
 // `pressed`/`released`.
 class IronlandShortcut : public QObject, public QtWayland::ironland_shortcut_v1 {
     Q_OBJECT

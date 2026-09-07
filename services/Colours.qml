@@ -84,7 +84,7 @@ Singleton {
 
     // Was a live edit of Hyprland's own layer-rule config (blur/ignore_alpha
     // for the drawers' backdrop) to match the transparency setting - purely
-    // Hyprland config automation, nothing to port. ironland-copositor's own
+    // Hyprland config automation, nothing to port. ironland-compositor's own
     // `blur` config setting covers backdrop blur compositor-wide instead
     // (see its `[blur]` section), just not per-namespace like this did.
     function reloadHyprRules(): void {}

@@ -39,7 +39,7 @@ MouseArea {
 
     // Click-to-select-a-window needed each window's on-screen position/size,
     // which (unlike Hyprland's IPC) no generic Wayland protocol exposes to
-    // a client - by design, not an oversight of ironland-copositor's (see
+    // a client - by design, not an oversight of ironland-compositor's (see
     // the port notes). Manual rectangle selection (drag) still works;
     // there's just nothing to snap to anymore.
     property list<var> clients: []

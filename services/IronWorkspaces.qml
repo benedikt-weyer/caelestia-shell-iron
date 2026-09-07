@@ -5,11 +5,11 @@ import Quickshell
 import Quickshell.Io
 
 // Wraps the `ironland-workspaces` helper binary (a standalone Wayland
-// client shipped by ironland-copositor - see its own module doc), since
+// client shipped by ironland-compositor - see its own module doc), since
 // Quickshell has no built-in support for `ext-workspace-v1`. Talks
 // line-delimited JSON over the process's stdin/stdout; see that binary's
 // doc comment for the wire format, including the best-effort `windows`
-// list per workspace (from ironland-copositor's own
+// list per workspace (from ironland-compositor's own
 // `ironland-workspace-windows-v1`, matched by title/app id - empty on a
 // compositor that doesn't support it).
 Singleton {

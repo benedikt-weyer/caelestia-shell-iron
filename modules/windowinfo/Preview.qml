@@ -9,7 +9,7 @@ import qs.components
 import qs.services
 
 // Live window screenshots need `ext-image-copy-capture-v1` (or similar)
-// linked to a toplevel handle, which ironland-copositor doesn't implement
+// linked to a toplevel handle, which ironland-compositor doesn't implement
 // yet - see the port notes. Always shows the placeholder rather than a
 // live preview until that lands.
 Item {

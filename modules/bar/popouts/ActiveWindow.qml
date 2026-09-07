@@ -82,7 +82,7 @@ Item {
         }
 
         ClippingWrapperRectangle {
-            // Live previews need a compositor protocol ironland-copositor
+            // Live previews need a compositor protocol ironland-compositor
             // doesn't implement yet (see the port notes) - a larger app
             // icon stands in for now.
             color: Colours.tPalette.m3surfaceContainer
