@@ -2,10 +2,24 @@ pragma ComponentBehavior: Bound
 
 import QtQuick.Layouts
 import Caelestia.Config
+import qs.components.controls
 import qs.modules.nexus.common
 
 PageBase {
     id: root
+
+    // Dock scopes, ordered to match config::DockScope (Monitor, SharedWorkspace, Global)
+    readonly property list<MenuItem> scopeItems: [
+        MenuItem {
+            text: qsTr("Monitor")
+        },
+        MenuItem {
+            text: qsTr("Shared workspace")
+        },
+        MenuItem {
+            text: qsTr("Global")
+        }
+    ]
 
     title: qsTr("Dock")
     isSubPage: true
@@ -32,7 +46,6 @@ PageBase {
         }
 
         StepperRow {
-            last: true
             label: qsTr("Icon size")
             subtext: qsTr("Size of the app icons in the dock")
             value: Config.dock.iconSize
@@ -40,6 +53,15 @@ PageBase {
             to: 64
             stepSize: 2
             onMoved: v => GlobalConfig.dock.iconSize = v
+        }
+
+        SelectRow {
+            last: true
+            label: qsTr("Scope")
+            subtext: qsTr("Which running apps are shown in the dock")
+            menuItems: root.scopeItems
+            active: root.scopeItems[Config.dock.scope]
+            onSelected: item => GlobalConfig.dock.scope = root.scopeItems.indexOf(item)
         }
     }
 }
