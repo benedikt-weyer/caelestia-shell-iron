@@ -26,14 +26,42 @@ Variants {
         // (rather than one popup per icon) so opening a menu always closes
         // whichever other one was open.
         property var menuTarget: null
-        // Pinned apps are always shown (even with no window on this screen, in
+
+        // Which running windows count as "on this dock", per Config.dock.scope:
+        // - Monitor: only this screen's own active workspace.
+        // - SharedWorkspace: every screen's active workspace, combined - so
+        //   every dock shows the same set, for setups where matching
+        //   workspace numbers across monitors are treated as one desktop.
+        // - Global: every running window, everywhere.
+        readonly property var scopedToplevels: {
+            const scope = contentItem.Config.dock.scope;
+
+            if (scope === DockScope.Global)
+                return Hypr.toplevels.values.filter(t => !Hypr.isToplevelIgnored(t));
+
+            if (scope === DockScope.SharedWorkspace) {
+                let combined = [];
+                for (const s of Quickshell.screens) {
+                    const ws = Hypr.workspacesFor(s).find(w => w.active);
+                    if (ws)
+                        combined = combined.concat(Hypr.toplevelsForWs(s, ws.index));
+                }
+                return combined;
+            }
+
+            const ws = Hypr.workspacesFor(win.modelData).find(w => w.active);
+            return ws ? Hypr.toplevelsForWs(win.modelData, ws.index) : [];
+        }
+
+        // Pinned apps are always shown (even with no window in scope, in
         // which case clicking launches a new instance) and always come first,
-        // in pinned order; any other running app follows in discovery order.
+        // in pinned order; any other in-scope running app follows in
+        // discovery order.
         readonly property var groups: {
             const pinned = GlobalConfig.dock.pinnedApps;
 
             const running = [];
-            for (const t of Hypr.toplevelsForScreen(win.modelData)) {
+            for (const t of win.scopedToplevels) {
                 const group = running.find(g => g.appId === t.appId);
                 if (group)
                     group.windows.push(t);
