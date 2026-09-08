@@ -8,6 +8,16 @@ import Caelestia.Config
 Singleton {
     id: root
 
+    // DesktopEntries.applications is flagged as a constant property, so
+    // reading it (even via heuristicLookup) doesn't make a binding react to
+    // the desktop entry scan finishing - callers evaluated before it
+    // completes (e.g. the dock's pinned icons at shell startup) would
+    // otherwise be stuck on the fallback icon forever. Bumping this counter
+    // off the one signal that does fire, and reading it in getAppIcon/
+    // getAppCategoryIcon, gives their callers' bindings something live to
+    // depend on.
+    property int appsGeneration: 0
+
     readonly property var weatherIcons: ({
             "0": "clear_day",
             "1": "clear_day",
@@ -134,6 +144,7 @@ Singleton {
     }
 
     function getAppIcon(name: string, fallback: string): string {
+        root.appsGeneration;
         const icon = DesktopEntries.heuristicLookup(name)?.icon;
         if (fallback !== "undefined")
             return Quickshell.iconPath(icon, fallback);
@@ -141,6 +152,7 @@ Singleton {
     }
 
     function getAppCategoryIcon(name: string, fallback: string): string {
+        root.appsGeneration;
         for (const iconConfig of GlobalConfig.bar.workspaces.windowIcons)
             if (matchIconConfig(name, iconConfig))
                 return iconConfig.icon;
@@ -244,5 +256,13 @@ Singleton {
         if (charging && (level === 4 || level === 1))
             level--;
         return charging ? `battery_charging_${(level + 3) * 10}` : `battery_${level}_bar`;
+    }
+
+    Connections {
+        function onApplicationsChanged(): void {
+            root.appsGeneration++;
+        }
+
+        target: DesktopEntries
     }
 }
