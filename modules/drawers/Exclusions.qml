@@ -42,7 +42,11 @@ Scope {
     component ExclusionZone: StyledWindow {
         screen: root.screen
         name: "border-exclusion"
-        exclusiveZone: contentItem.Config.border.thickness
+        // Matches the border decoration itself (see ContentWindow's
+        // borderThickness), which shrinks to nothing on fullscreen - without
+        // this, the reservation would outlive the border it's reserving
+        // space for, leaving a dead strip where nothing is drawn.
+        exclusiveZone: root.bar.fullscreen ? 0 : contentItem.Config.border.thickness
         mask: Region {}
         implicitWidth: 1
         implicitHeight: 1
