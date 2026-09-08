@@ -39,7 +39,7 @@ QtObject {
     property bool hasActionIcons
     property list<var> actions
 
-    readonly property bool hasFullscreen: Hypr.toplevels.values.some(t => t.fullscreen && t.screens.includes(Hypr.focusedMonitor))
+    readonly property bool hasFullscreen: Hypr.hasFullscreenOn(Hypr.focusedMonitor)
 
     readonly property Timer timer: Timer {
         running: true

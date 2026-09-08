@@ -22,7 +22,7 @@ Singleton {
     property bool loaded
 
     function hasFullscreen(): bool {
-        return Hypr.toplevels.values.some(t => t.fullscreen);
+        return Quickshell.screens.some(s => Hypr.hasFullscreenOn(s));
     }
 
     function shouldShowPopup(): bool {

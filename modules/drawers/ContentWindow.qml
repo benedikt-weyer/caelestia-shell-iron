@@ -22,7 +22,7 @@ StyledWindow {
     readonly property ScreenState screenState: ShellState.forScreen(screen)
 
     readonly property ShellScreen monitor: Hypr.monitorFor(screen)
-    readonly property bool hasFullscreen: Hypr.toplevels.values.some(t => t.fullscreen && t.screens.includes(root.screen))
+    readonly property bool hasFullscreen: Hypr.hasFullscreenOn(root.screen)
 
     property real fsTransitionProg: hasFullscreen ? 1 : 0
     readonly property real sdfBorderOffset: 2 * fsTransitionProg // SDFs joins are not exact, so offset by 2px to ensure nothing shows

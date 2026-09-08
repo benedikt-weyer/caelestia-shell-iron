@@ -15,7 +15,7 @@ Scope {
     // toggle - which only happens on release, to allow interrupting a tap -
     // still opens on whichever output had the pointer at press time.
     property string launcherOutputName
-    readonly property bool hasFullscreen: Hypr.toplevels.values.some(t => t.fullscreen && t.screens.includes(Hypr.focusedMonitor))
+    readonly property bool hasFullscreen: Hypr.hasFullscreenOn(Hypr.focusedMonitor)
 
     // The screen the "launcher" shortcut should open on: wherever the
     // pointer was when it fired, falling back to the focused screen if the
