@@ -132,7 +132,6 @@ PageBase {
         }
 
         SelectRow {
-            last: true
             label: qsTr("Default player")
             subtext: qsTr("Preferred media player when several are open")
             menuItems: playerVariants.instances
@@ -140,6 +139,14 @@ PageBase {
             fallbackIcon: "music_note"
             fallbackText: GlobalConfig.services.defaultPlayer || qsTr("Auto")
             onSelected: item => GlobalConfig.services.defaultPlayer = item.text
+        }
+
+        ToggleRow {
+            last: true
+            text: qsTr("Media control buttons")
+            subtext: qsTr("React to media key shortcuts (play/pause, next, previous, stop)")
+            checked: GlobalConfig.services.mediaKeysEnabled
+            onToggled: GlobalConfig.services.mediaKeysEnabled = checked
         }
 
         // Input increments

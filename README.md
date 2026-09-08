@@ -237,7 +237,7 @@ For example, to automatically hide the bar on the monitor named `DP-1`:
 > - `nexus`: `networkRescanInterval`
 > - `notifs`: `actionOnClick`, `defaultExpireTimeout`, `expire`, `fullscreen`, `fullscreenExpireTimeout`
 > - `paths`: `lyricsDir`, `wallpaperDir`
-> - `services`: `audioIncrement`, `brightnessIncrement`, `defaultPlayer`, `gpuType`, `lyricsBackend`, `maxVolume`, `playerAliases`, `smartScheme`, `useFahrenheit`, `useFahrenheitPerformance`, `useTwelveHourClock`, `visualiserBars`, `weatherLocation`
+> - `services`: `audioIncrement`, `brightnessIncrement`, `defaultPlayer`, `gpuType`, `lyricsBackend`, `maxVolume`, `mediaKeysEnabled`, `playerAliases`, `smartScheme`, `useFahrenheit`, `useFahrenheitPerformance`, `useTwelveHourClock`, `visualiserBars`, `weatherLocation`
 > - `utilities.toasts`: all except `fullscreen`
 > - `utilities.vpn`: `enabled`, `provider`, `selectedProvider`
 >
@@ -740,6 +740,7 @@ For example, to automatically hide the bar on the monitor named `DP-1`:
         "audioIncrement": 0.1,
         "brightnessIncrement": 0.1,
         "maxVolume": 1.0,
+        "mediaKeysEnabled": true,
         "smartScheme": true,
         "defaultPlayer": "Spotify",
         "playerAliases": [{ "from": "com.github.th_ch.youtube_music", "to": "YT Music" }],

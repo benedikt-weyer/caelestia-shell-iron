@@ -96,6 +96,8 @@ Singleton {
         name: "mediaToggle"
         description: "Toggle media playback"
         onPressed: {
+            if (!GlobalConfig.services.mediaKeysEnabled)
+                return;
             const active = root.active;
             if (active && active.canTogglePlaying)
                 active.togglePlaying();
@@ -108,6 +110,8 @@ Singleton {
         name: "mediaPrev"
         description: "Previous track"
         onPressed: {
+            if (!GlobalConfig.services.mediaKeysEnabled)
+                return;
             const active = root.active;
             if (active && active.canGoPrevious)
                 active.previous();
@@ -120,6 +124,8 @@ Singleton {
         name: "mediaNext"
         description: "Next track"
         onPressed: {
+            if (!GlobalConfig.services.mediaKeysEnabled)
+                return;
             const active = root.active;
             if (active && active.canGoNext)
                 active.next();
@@ -131,7 +137,10 @@ Singleton {
         // qmllint enable unresolved-type
         name: "mediaStop"
         description: "Stop media playback"
-        onPressed: root.active?.stop()
+        onPressed: {
+            if (GlobalConfig.services.mediaKeysEnabled)
+                root.active?.stop();
+        }
     }
 
     IpcHandler {
