@@ -124,6 +124,22 @@ Scope {
         }
     }
 
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "volumeUp"
+        description: "Increase volume"
+        onPressed: Audio.incrementVolume()
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "volumeDown"
+        description: "Decrease volume"
+        onPressed: Audio.decrementVolume()
+    }
+
     IpcHandler {
         function toggle(drawer: string): void {
             if (list().split("\n").includes(drawer)) {
