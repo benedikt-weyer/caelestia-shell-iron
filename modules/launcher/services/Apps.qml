@@ -8,16 +8,27 @@ import qs.utils
 Searcher {
     id: root
 
+    // Wraps a command in the user's login shell, so it inherits a real PATH.
+    // This shell is commonly started by a systemd user unit whose own
+    // Environment=PATH is minimal (just enough for the shell itself), so
+    // launching by bare command name - as every DesktopEntry's Exec= does -
+    // would otherwise fail to find apps that aren't on that stripped-down
+    // PATH, even though they're installed and on the user's normal one.
+    function loginShellWrap(command: list<string>): list<string> {
+        const shell = Quickshell.env("SHELL") || "/bin/sh";
+        const quoted = command.map(arg => `'${arg.replace(/'/g, `'\\''`)}'`).join(" ");
+        return [shell, "-lc", quoted];
+    }
+
     function launch(entry: DesktopEntry): void {
         appDb.incrementFrequency(entry.id);
 
-        if (entry.runInTerminal)
-            Quickshell.execDetached({
-                command: [...GlobalConfig.general.apps.terminal, `${Quickshell.shellDir}/assets/wrap_term_launch.sh`, ...entry.command],
-                workingDirectory: entry.workingDirectory
-            });
-        else
-            entry.execute();
+        const command = entry.runInTerminal ? [...GlobalConfig.general.apps.terminal, `${Quickshell.shellDir}/assets/wrap_term_launch.sh`, ...entry.command] : entry.command;
+
+        Quickshell.execDetached({
+            command: loginShellWrap(command),
+            workingDirectory: entry.workingDirectory
+        });
     }
 
     function search(search: string): var {
