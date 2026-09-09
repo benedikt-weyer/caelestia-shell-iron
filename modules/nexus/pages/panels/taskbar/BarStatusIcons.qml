@@ -12,6 +12,7 @@ PageBase {
             kbLayout: qsTr("Keyboard layout"),
             audio: qsTr("Speakers"),
             microphone: qsTr("Microphone"),
+            mixer: qsTr("Mixer"),
             network: qsTr("Network"),
             bluetooth: qsTr("Bluetooth"),
             battery: qsTr("Battery")

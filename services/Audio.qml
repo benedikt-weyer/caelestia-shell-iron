@@ -17,6 +17,8 @@ Singleton {
     property list<PwNode> sinks: []
     property list<PwNode> sources: []
     property list<PwNode> streams: []
+    property list<PwNode> outputStreams: []
+    property list<PwNode> inputStreams: []
 
     readonly property PwNode sink: Pipewire.defaultAudioSink
     readonly property PwNode source: Pipewire.defaultAudioSource
@@ -109,6 +111,8 @@ Singleton {
         const newSinks = [];
         const newSources = [];
         const newStreams = [];
+        const newOutputStreams = [];
+        const newInputStreams = [];
 
         for (const node of Pipewire.nodes.values) {
             if (!node.isStream) {
@@ -118,12 +122,20 @@ Singleton {
                     newSources.push(node);
             } else if (node.audio) {
                 newStreams.push(node);
+                // A stream is either capturing (mic input, e.g. voice chat/recording
+                // apps) or playing back (everything else) - never both.
+                if (node.type & PwNodeType.AudioInStream)
+                    newInputStreams.push(node);
+                else
+                    newOutputStreams.push(node);
             }
         }
 
         root.sinks = newSinks;
         root.sources = newSources;
         root.streams = newStreams;
+        root.outputStreams = newOutputStreams;
+        root.inputStreams = newInputStreams;
     }
 
     onSinkChanged: {

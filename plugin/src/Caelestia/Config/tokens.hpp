@@ -113,6 +113,7 @@ class BarTokens : public settings::ObjectNode {
     CONFIG_PROPERTY(int, batteryWidth, 250)
     CONFIG_PROPERTY(int, networkWidth, 320)
     CONFIG_PROPERTY(int, kbLayoutWidth, 320)
+    CONFIG_PROPERTY(int, mixerWidth, 320)
 };
 
 class DashboardTokens : public settings::ObjectNode {

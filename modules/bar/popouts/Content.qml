@@ -115,6 +115,13 @@ Item {
         }
 
         Popout {
+            name: "mixer"
+            sourceComponent: MixerPopout {
+                popouts: root.popouts
+            }
+        }
+
+        Popout {
             name: "kblayout"
             sourceComponent: KbLayout {}
         }

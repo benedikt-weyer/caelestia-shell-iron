@@ -106,6 +106,18 @@ StyledRect {
                     }
                 }
                 DelegateChoice {
+                    roleValue: "mixer"
+                    delegate: EntryWrapper {
+                        margin: Tokens.spacing.extraSmall / 2
+
+                        MaterialIcon {
+                            text: "tune"
+                            color: root.colour
+                            fontStyle: Tokens.font.icon.medium
+                        }
+                    }
+                }
+                DelegateChoice {
                     roleValue: "kbLayout"
                     delegate: EntryWrapper {
                         StyledText {
