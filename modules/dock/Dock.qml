@@ -130,14 +130,47 @@ Variants {
             RowLayout {
                 id: row
 
+                // Which sibling icon (if any) currently occupies screen x
+                // `x` - used on drop to figure out where a dragged icon
+                // landed.
+                function hitTest(x: real): var {
+                    for (let i = 0; i < rep.count; i++) {
+                        const it = rep.itemAt(i);
+                        if (it && x >= it.x && x < it.x + it.width)
+                            return it;
+                    }
+                    return null;
+                }
+
+                // Moves `appId` to index `to` within the pinned segment
+                // (pinned apps always occupy the front of the dock, in this
+                // order) and persists it - a no-op if `appId` isn't pinned.
+                function movePinned(appId: string, to: int): void {
+                    const order = [...GlobalConfig.dock.pinnedApps];
+                    const from = order.indexOf(appId);
+                    if (from === -1 || to < 0 || to >= order.length || from === to)
+                        return;
+                    order.splice(to, 0, order.splice(from, 1)[0]);
+                    GlobalConfig.dock.pinnedApps = order;
+                }
+
                 anchors.centerIn: parent
                 spacing: Tokens.spacing.large
 
                 Repeater {
-                    model: win.groups
+                    id: rep
+
+                    // Wrapped in a ScriptModel so a reorder (from dragging,
+                    // below) only moves the affected delegates instead of
+                    // destroying and recreating every icon.
+                    model: ScriptModel {
+                        values: win.groups
+                        objectProp: "appId"
+                    }
 
                     DockIcon {
                         required property var modelData
+                        required property int index
 
                         dock: win
                         group: modelData
@@ -243,13 +276,23 @@ Variants {
         }
     }
 
-    component DockIcon: ColumnLayout {
+    // The root is a plain Item (rather than the ColumnLayout that's its
+    // only real child, `content`) so `content.x` is free for the drag
+    // offset below while `icon`'s own x/y - set by the RowLayout that
+    // arranges dock icons - stays untouched.
+    component DockIcon: Item {
         id: icon
 
         required property var dock
         required property var group
         required property bool pinned
         required property int iconSize
+        // Only pinned icons are draggable: their order is the only one
+        // that's actually persisted (GlobalConfig.dock.pinnedApps) -
+        // running-app icons are ordered by discovery and would just
+        // snap back to that order on the next window/workspace change.
+        property bool dragging
+        property real grabOffsetX
 
         readonly property alias anchorItem: iconRoot
         readonly property alias openItem: openItem
@@ -287,84 +330,135 @@ Variants {
                 w.close();
         }
 
-        spacing: Tokens.spacing.extraSmall / 2
+        implicitWidth: content.implicitWidth
+        implicitHeight: content.implicitHeight
+        z: icon.dragging ? 1 : 0
 
-        Item {
-            id: iconRoot
+        Behavior on x {
+            enabled: !icon.dragging
 
-            Layout.alignment: Qt.AlignHCenter
-            implicitWidth: icon.iconSize
-            implicitHeight: icon.iconSize
+            Anim {}
+        }
 
-            IconImage {
-                anchors.centerIn: parent
-                asynchronous: true
-                implicitSize: icon.iconSize
-                source: Icons.getAppIcon(icon.group.appId, "image-missing")
-            }
+        Anim {
+            id: returnAnim
 
-            MouseArea {
-                anchors.fill: parent
-                acceptedButtons: Qt.LeftButton | Qt.RightButton
-                cursorShape: Qt.PointingHandCursor
-                onClicked: mouse => {
-                    if (mouse.button === Qt.RightButton)
-                        icon.dock.menuTarget = icon.dock.menuTarget === icon ? null : icon;
-                    else
-                        icon.primaryAction();
+            target: content
+            property: "x"
+            to: 0
+        }
+
+        ColumnLayout {
+            id: content
+
+            spacing: Tokens.spacing.extraSmall / 2
+
+            Item {
+                id: iconRoot
+
+                Layout.alignment: Qt.AlignHCenter
+                implicitWidth: icon.iconSize
+                implicitHeight: icon.iconSize
+
+                IconImage {
+                    anchors.centerIn: parent
+                    asynchronous: true
+                    implicitSize: icon.iconSize
+                    source: Icons.getAppIcon(icon.group.appId, "image-missing")
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    preventStealing: true
+                    cursorShape: icon.dragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
+
+                    onPressed: e => {
+                        if (icon.pinned && e.button === Qt.LeftButton)
+                            icon.grabOffsetX = e.x;
+                    }
+
+                    onPositionChanged: e => {
+                        if (!icon.pinned || !pressed)
+                            return;
+
+                        const abs = iconRoot.mapToItem(row, e.x, 0).x;
+                        if (!icon.dragging) {
+                            // Small dead zone so a plain click doesn't nudge
+                            // the icon.
+                            if (Math.abs(abs - icon.grabOffsetX - icon.x) < 4)
+                                return;
+                            icon.dragging = true;
+                        }
+                        content.x = abs - icon.grabOffsetX - icon.x;
+                    }
+
+                    onReleased: e => {
+                        if (icon.dragging) {
+                            icon.dragging = false;
+                            returnAnim.start();
+                            const hit = row.hitTest(icon.x + content.x + content.width / 2);
+                            if (hit && hit !== icon && hit.pinned)
+                                row.movePinned(icon.group.appId, hit.index);
+                        } else if (e.button === Qt.RightButton) {
+                            icon.dock.menuTarget = icon.dock.menuTarget === icon ? null : icon;
+                        } else {
+                            icon.primaryAction();
+                        }
+                    }
+                }
+
+                MenuItem {
+                    id: openItem
+
+                    icon: "open_in_new"
+                    text: icon.group.windows.length > 0 ? qsTr("New window") : qsTr("Open")
+
+                    onClicked: icon.launch()
+                }
+
+                MenuItem {
+                    id: pinItem
+
+                    icon: icon.pinned ? "keep_off" : "keep"
+                    text: icon.pinned ? qsTr("Unpin from dock") : qsTr("Pin to dock")
+
+                    onClicked: icon.togglePin()
+                }
+
+                MenuItem {
+                    id: quitItem
+
+                    icon: "close"
+                    text: qsTr("Quit")
+
+                    onClicked: icon.quit()
                 }
             }
 
-            MenuItem {
-                id: openItem
+            StyledRect {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.preferredWidth: icon.active ? icon.iconSize * 0.5 : 4
+                Layout.preferredHeight: icon.active ? 3 : 4
+                radius: icon.active ? 1.5 : 2
+                color: icon.active ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+                opacity: icon.group.windows.length > 0 ? 1 : 0
 
-                icon: "open_in_new"
-                text: icon.group.windows.length > 0 ? qsTr("New window") : qsTr("Open")
+                Behavior on Layout.preferredWidth {
+                    Anim {}
+                }
 
-                onClicked: icon.launch()
-            }
+                Behavior on Layout.preferredHeight {
+                    Anim {}
+                }
 
-            MenuItem {
-                id: pinItem
+                Behavior on radius {
+                    Anim {}
+                }
 
-                icon: icon.pinned ? "keep_off" : "keep"
-                text: icon.pinned ? qsTr("Unpin from dock") : qsTr("Pin to dock")
-
-                onClicked: icon.togglePin()
-            }
-
-            MenuItem {
-                id: quitItem
-
-                icon: "close"
-                text: qsTr("Quit")
-
-                onClicked: icon.quit()
-            }
-        }
-
-        StyledRect {
-            Layout.alignment: Qt.AlignHCenter
-            Layout.preferredWidth: icon.active ? icon.iconSize * 0.5 : 4
-            Layout.preferredHeight: icon.active ? 3 : 4
-            radius: icon.active ? 1.5 : 2
-            color: icon.active ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
-            opacity: icon.group.windows.length > 0 ? 1 : 0
-
-            Behavior on Layout.preferredWidth {
-                Anim {}
-            }
-
-            Behavior on Layout.preferredHeight {
-                Anim {}
-            }
-
-            Behavior on radius {
-                Anim {}
-            }
-
-            Behavior on opacity {
-                Anim {}
+                Behavior on opacity {
+                    Anim {}
+                }
             }
         }
     }
