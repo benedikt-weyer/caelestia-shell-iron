@@ -262,6 +262,19 @@ void Gpu::finishNameSource(int index, int generation, QString name) {
     }
 }
 
+namespace {
+
+// The shell's PATH lacks the profile dirs (/nix/store/*/bin, ~/.nix-profile/bin, ...)
+// that hold nvidia-smi/glxinfo/lspci, so a bare QProcess::start() can't resolve them.
+// Route through the login shell to re-source the user's real PATH before lookup.
+QString shellQuote(const QString& arg) {
+    QString quoted = arg;
+    quoted.replace(u'\'', u"'\\''"_s);
+    return u"'"_s + quoted + u"'"_s;
+}
+
+} // namespace
+
 void Gpu::runProcess(const QString& program, const QStringList& args, std::function<void(const QByteArray&)> callback) {
     auto* proc = new QProcess(this);
     proc->setStandardErrorFile(QProcess::nullDevice());
@@ -284,7 +297,13 @@ void Gpu::runProcess(const QString& program, const QStringList& args, std::funct
         }
     });
 
-    proc->start(program, args);
+    const QString envShell = qEnvironmentVariable("SHELL");
+    const QString shell = envShell.isEmpty() ? u"/bin/sh"_s : envShell;
+    QStringList quoted = { shellQuote(program) };
+    for (const QString& arg : args) {
+        quoted << shellQuote(arg);
+    }
+    proc->start(shell, { u"-lc"_s, quoted.join(u' ') });
 }
 
 void Gpu::readGenericUsage() {
