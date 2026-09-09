@@ -15,6 +15,27 @@ PageBase {
     readonly property var cfg: IronlandCtl.config
     property var detected: null // name -> {make, model, width, height, ...}, or null before detection finishes
     property string detectStatus: qsTr("Detecting connected monitors…")
+    readonly property var arrangementMonitors: {
+        const out = [];
+        for (const n in (root.detected ?? {})) {
+            const d = root.detected[n];
+            out.push({
+                name: n,
+                x: d.x,
+                y: d.y,
+                width: d.width,
+                height: d.height
+            });
+        }
+        return out;
+    }
+    readonly property string primaryOutputName: {
+        const outs = root.cfg?.outputs ?? {};
+        for (const n in outs)
+            if (outs[n].primary)
+                return n;
+        return "";
+    }
 
     function describe(name: string): string {
         const detail = root.cfg?.outputs[name];
@@ -75,6 +96,33 @@ PageBase {
         spacing: Tokens.spacing.extraSmall / 2
 
         CompositorError {}
+
+        SectionHeader {
+            first: true
+            text: qsTr("Arrangement")
+            visible: arrangement.visible
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.bottomMargin: Tokens.spacing.small
+            visible: arrangement.visible
+            text: qsTr("Drag a monitor to reposition it — edges snap to its neighbours.")
+            color: Colours.palette.m3onSurfaceVariant
+            font: Tokens.font.label.small
+            wrapMode: Text.WordWrap
+        }
+
+        MonitorArrangement {
+            id: arrangement
+
+            Layout.fillWidth: true
+            Layout.bottomMargin: Tokens.spacing.medium
+            visible: root.arrangementMonitors.length > 0
+            monitors: root.arrangementMonitors
+            primaryName: root.primaryOutputName
+            onPlaced: (name, x, y) => IronlandCtl.outputsSet(name, ["--x", String(x), "--y", String(y)], () => root.runDetect())
+        }
 
         RowLayout {
             Layout.fillWidth: true
