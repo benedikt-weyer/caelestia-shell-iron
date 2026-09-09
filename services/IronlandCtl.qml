@@ -8,9 +8,10 @@ import Quickshell.Io
 // Talks to `ironlandctl` (see the sibling ironland-compositor repo's
 // ironlandctl/ crate) to read and edit ironland-compositor's config.toml -
 // keyboard, shortcuts, monitors, workspaces, focus and appearance settings
-// that live outside this shell's own Caelestia.Config tree entirely. The
-// Nexus "Compositor" page (modules/nexus/pages/compositor) is the only
-// consumer of this service.
+// that live outside this shell's own Caelestia.Config tree entirely. Mainly
+// consumed by the Nexus "Compositor" page (modules/nexus/pages/compositor)
+// for editing; Bar.qml also reads `config.workspaces.dynamic` to decide
+// whether scrolling past the last workspace should request a new one.
 Singleton {
     id: root
 

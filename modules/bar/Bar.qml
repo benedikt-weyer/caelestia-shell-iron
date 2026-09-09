@@ -80,10 +80,16 @@ ColumnLayout {
         if (ch?.entryId === "workspaces" && Config.bar.scrollActions.workspaces) {
             // Workspace scroll - clamps at the first/last workspace rather
             // than wrapping (Hyprland's `workspace r+1/-1` wrapped; there's
-            // no equivalent relative-dispatch here).
+            // no equivalent relative-dispatch here). With dynamic workspaces
+            // enabled compositor-side, scrolling past the last workspace
+            // instead requests index ws.length (one past the end) so the
+            // compositor creates a new trailing workspace, per
+            // workspaces.dynamic's documented behaviour.
             const ws = Hypr.workspacesFor(screen);
             const activeIdx = ws.find(w => w.active)?.index ?? 0;
-            const nextIdx = Math.max(0, Math.min(ws.length - 1, activeIdx + (angleDelta.y > 0 ? -1 : 1)));
+            const dynamic = IronlandCtl.config?.workspaces?.dynamic ?? false;
+            const upperBound = dynamic ? ws.length : ws.length - 1;
+            const nextIdx = Math.max(0, Math.min(upperBound, activeIdx + (angleDelta.y > 0 ? -1 : 1)));
             if (nextIdx !== activeIdx)
                 Hypr.switchWorkspace(screen, nextIdx);
         } else if (y < screen.height / 2 && Config.bar.scrollActions.volume) {
