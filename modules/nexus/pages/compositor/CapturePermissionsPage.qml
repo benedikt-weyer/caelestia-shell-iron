@@ -18,17 +18,17 @@ PageBase {
     title: qsTr("Screen Capture")
     isSubPage: true
 
-    // qmllint disable unresolved-type
-    IronlandCapturePermissions {
-        // qmllint enable unresolved-type
-        id: permissions
-    }
-
     ColumnLayout {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         width: root.cappedWidth
         spacing: Tokens.spacing.extraSmall / 2
+
+        // qmllint disable unresolved-type
+        IronlandCapturePermissions {
+            // qmllint enable unresolved-type
+            id: permissions
+        }
 
         StyledText {
             Layout.fillWidth: true
