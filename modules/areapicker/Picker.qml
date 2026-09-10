@@ -7,6 +7,7 @@ import Caelestia
 import qs.components
 import qs.components.effects
 import qs.services
+import qs.utils
 
 MouseArea {
     id: root
@@ -78,7 +79,10 @@ MouseArea {
                 Quickshell.execDetached(["sh", "-c", "wl-copy --type image/png < " + path]);
                 Quickshell.execDetached(["notify-send", "-a", "caelestia-cli", "-i", path, "Screenshot taken", "Screenshot copied to clipboard"]);
             } else {
-                Quickshell.execDetached(["swappy", "-f", path]);
+                const outDir = Paths.screenshotsdir;
+                const outFile = `${outDir}/screenshot-${Qt.formatDateTime(new Date(), "yyyyMMdd_hhmmss")}.png`;
+                // Positional shell params ($1/$2/$3), not string interpolation, so a save dir with spaces/quotes stays safe
+                Quickshell.execDetached(["sh", "-c", 'mkdir -p "$1" && exec swappy -f "$2" -o "$3"', "sh", outDir, path, outFile]);
             }
             closeAnim.start();
         });

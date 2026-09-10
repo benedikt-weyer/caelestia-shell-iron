@@ -236,7 +236,7 @@ For example, to automatically hide the bar on the monitor named `DP-1`:
 > - `lock`: `enableFprint`, `enableHowdy`, `maxFprintTries`, `maxHowdyTries`, `triggerHowdyOnWake`
 > - `nexus`: `networkRescanInterval`
 > - `notifs`: `actionOnClick`, `defaultExpireTimeout`, `expire`, `fullscreen`, `fullscreenExpireTimeout`
-> - `paths`: `lyricsDir`, `wallpaperDir`
+> - `paths`: `lyricsDir`, `screenshotDir`, `wallpaperDir`
 > - `services`: `audioIncrement`, `brightnessIncrement`, `defaultPlayer`, `gpuType`, `lyricsBackend`, `maxVolume`, `mediaKeysEnabled`, `playerAliases`, `smartScheme`, `useFahrenheit`, `useFahrenheitPerformance`, `useTwelveHourClock`, `visualiserBars`, `weatherLocation`
 > - `utilities.toasts`: all except `fullscreen`
 > - `utilities.vpn`: `enabled`, `provider`, `selectedProvider`
@@ -832,6 +832,7 @@ For example, to automatically hide the bar on the monitor named `DP-1`:
     "paths": {
         "wallpaperDir": "~/Pictures/Wallpapers",
         "lyricsDir": "~/Music/lyrics/",
+        "screenshotDir": "~/Pictures/Screenshots",
         "sessionGif": "root:/assets/kurukuru.gif",
         "mediaGif": "root:/assets/bongocat.gif",
         "noNotifsPic": "root:/assets/dino.png",

@@ -59,6 +59,20 @@ PageBase {
             onSelected: app => GlobalConfig.general.apps.explorer = app.command
         }
 
+        // Screenshots
+        SectionHeader {
+            text: qsTr("Screenshots")
+        }
+
+        TextFieldRow {
+            first: true
+            last: true
+            label: qsTr("Save location")
+            subtext: qsTr("Folder screenshots taken with the area picker are saved to")
+            value: Paths.shortenHome(GlobalConfig.paths.screenshotDir)
+            onEditingFinished: v => GlobalConfig.paths.screenshotDir = v || GlobalConfig.paths.screenshotDir
+        }
+
         // Library
         SectionHeader {
             text: qsTr("Library")
