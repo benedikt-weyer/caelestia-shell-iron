@@ -66,11 +66,21 @@ PageBase {
         }
 
         SelectRow {
-            last: true
             label: qsTr("Position")
             menuItems: root.positionItems
             active: root.positionItems[Math.max(0, root.positionValues.indexOf(root.cfg?.performance.fps_overlay_position ?? "top_right"))]
             onSelected: item => IronlandCtl.setValue("performance.fps_overlay_position", root.positionValues[root.positionItems.indexOf(item)])
+        }
+
+        TextFieldRow {
+            last: true
+            label: qsTr("Redraw interval")
+            subtext: qsTr("How often the overlay's text is redrawn (ms) - frame timing is still sampled every frame either way; 0 redraws every frame too")
+            value: String(root.cfg?.performance.fps_overlay_interval_ms ?? 500)
+            validator: IntValidator {
+                bottom: 0
+            }
+            onEditingFinished: v => IronlandCtl.setValue("performance.fps_overlay_interval_ms", v || "500")
         }
 
         SectionHeader {
