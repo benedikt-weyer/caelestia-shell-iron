@@ -16,6 +16,8 @@ MouseArea {
 
     property bool onClient
 
+    readonly property real dragThreshold: 6
+
     // Was synced live from Hyprland's own border config for visual parity
     // when snapped to a window rect - both that sync and the snap itself
     // (see `clients`/`checkClientRects` below) needed per-window on-screen
@@ -26,6 +28,10 @@ MouseArea {
 
     property real ssx
     property real ssy
+    // Whether the current press has moved far enough to count as a drag
+    // (a manual rectangle selection) rather than a plain click, which
+    // instead captures the whole display - see `onReleased`/`captureWhole`.
+    property bool dragged
 
     property real sx: 0
     property real sy: 0
@@ -45,6 +51,25 @@ MouseArea {
     property list<var> clients: []
 
     function checkClientRects(x: real, y: real): void {}
+
+    // A plain click (no drag) captures the whole display instead of
+    // whatever the last/default selection rectangle happened to be.
+    function captureWhole(): void {
+        sx = 0;
+        sy = 0;
+        ex = screen.width;
+        ey = screen.height;
+    }
+
+    function proceed(): void {
+        if (root.loader.freeze) {
+            save();
+        } else {
+            overlay.visible = border.visible = false;
+            screencopy.visible = false;
+            screencopy.active = true;
+        }
+    }
 
     function save(): void {
         const tmpfile = Qt.resolvedUrl(`/tmp/caelestia-picker-${Quickshell.processId}-${Date.now()}.png`);
@@ -84,19 +109,17 @@ MouseArea {
     onPressed: event => {
         ssx = event.x;
         ssy = event.y;
+        dragged = false;
     }
 
     onReleased: {
         if (closeAnim.running)
             return;
 
-        if (root.loader.freeze) {
-            save();
-        } else {
-            overlay.visible = border.visible = false;
-            screencopy.visible = false;
-            screencopy.active = true;
-        }
+        if (!dragged)
+            captureWhole();
+
+        proceed();
     }
 
     onPositionChanged: event => {
@@ -105,6 +128,8 @@ MouseArea {
 
         if (pressed) {
             onClient = false;
+            if (!dragged && Math.hypot(x - ssx, y - ssy) > dragThreshold)
+                dragged = true;
             sx = ssx;
             sy = ssy;
             ex = x;
@@ -116,6 +141,14 @@ MouseArea {
 
     focus: true
     Keys.onEscapePressed: closeAnim.start()
+    Keys.onReturnPressed: {
+        captureWhole();
+        proceed();
+    }
+    Keys.onEnterPressed: {
+        captureWhole();
+        proceed();
+    }
 
     SequentialAnimation {
         id: closeAnim
@@ -222,6 +255,31 @@ MouseArea {
 
         Behavior on border.color {
             CAnim {}
+        }
+    }
+
+    StyledRect {
+        id: hint
+
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: 24
+        implicitWidth: hintText.implicitWidth + Tokens.padding.medium * 2
+        implicitHeight: hintText.implicitHeight + Tokens.padding.small * 2
+        radius: Tokens.rounding.full
+        color: Colours.palette.m3surfaceContainerHigh
+        opacity: root.dragged ? 0 : 0.9
+
+        Behavior on opacity {
+            Anim {}
+        }
+
+        StyledText {
+            id: hintText
+
+            anchors.centerIn: parent
+            text: "Click for full screen · drag to select an area · Esc to cancel"
+            color: Colours.palette.m3onSurface
+            font: Tokens.font.body.small
         }
     }
 

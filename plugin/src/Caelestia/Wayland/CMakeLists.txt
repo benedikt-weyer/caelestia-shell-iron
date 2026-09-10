@@ -4,6 +4,7 @@ qml_module(caelestia-wayland
     SOURCES
         ironlandshortcut.cpp
         ironlandfocusgrab.cpp
+        ironlandpermissionprompt.cpp
     LIBRARIES
         Qt::Gui
         Qt::GuiPrivate
@@ -16,4 +17,5 @@ caelestia_add_wayland_protocol(caelestia-wayland
     FILES
         "${CMAKE_SOURCE_DIR}/plugin/protocols/ironland-shortcuts-v1.xml"
         "${CMAKE_SOURCE_DIR}/plugin/protocols/ironland-focus-grab-v1.xml"
+        "${CMAKE_SOURCE_DIR}/plugin/protocols/ironland-permission-prompt-v1.xml"
 )
