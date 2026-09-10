@@ -56,11 +56,18 @@ PageBase {
         }
 
         NavRow {
-            last: true
             icon: "screenshot_monitor"
             text: qsTr("Screen Capture")
             subtext: qsTr("Programs allowed to capture the screen")
             onClicked: root.nState.openSubPage(6)
+        }
+
+        NavRow {
+            last: true
+            icon: "speed"
+            text: qsTr("Performance")
+            subtext: root.cfg?.performance.fps_overlay ? qsTr("FPS overlay on") : qsTr("FPS overlay off")
+            onClicked: root.nState.openSubPage(7)
         }
     }
 }
