@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Caelestia.Config
 import Caelestia.Wayland
+import qs.components
 import qs.components.controls
 import qs.services
 import qs.modules.nexus.common
