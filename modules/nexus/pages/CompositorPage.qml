@@ -49,11 +49,18 @@ PageBase {
         }
 
         NavRow {
-            last: true
             icon: "palette"
             text: qsTr("Appearance")
             subtext: qsTr("Dark mode, wallpaper, blur, corners, cursor")
             onClicked: root.nState.openSubPage(5)
+        }
+
+        NavRow {
+            last: true
+            icon: "screenshot_monitor"
+            text: qsTr("Screen Capture")
+            subtext: qsTr("Programs allowed to capture the screen")
+            onClicked: root.nState.openSubPage(6)
         }
     }
 }
