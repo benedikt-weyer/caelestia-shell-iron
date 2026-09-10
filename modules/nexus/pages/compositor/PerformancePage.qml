@@ -1,6 +1,8 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import Caelestia.Config
+import Caelestia.Wayland
 import qs.components.controls
 import qs.services
 import qs.modules.nexus.common
@@ -24,6 +26,20 @@ PageBase {
         }
     ]
     readonly property var positionValues: ["top_left", "top_right", "bottom_left", "bottom_right"]
+    // Cycled through by a stable hash of each stage name, so the same stage
+    // (e.g. "submit") always gets the same colour across repaints without
+    // hardcoding a name-to-colour table that would silently go stale the
+    // moment the compositor reports a stage name this page doesn't know
+    // about (see `ironland-frame-capture-v1.xml`'s own doc on that).
+    readonly property list<color> stageColors: [Colours.palette.m3primary, Colours.palette.m3secondary, Colours.palette.m3tertiary, Colours.palette.m3error, Colours.palette.m3outline]
+
+    function stageColor(name: string): color {
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+        }
+        return root.stageColors[hash % root.stageColors.length];
+    }
 
     title: qsTr("Performance")
     isSubPage: true
@@ -78,6 +94,119 @@ PageBase {
             subtext: qsTr("Also report each detected stutter via the compositor's log (journalctl --user, or the terminal under `run`)")
             checked: root.cfg?.performance.stutter_log ?? true
             onToggled: IronlandCtl.setValue("performance.stutter_log", checked ? "true" : "false")
+        }
+
+        SectionHeader {
+            text: qsTr("Frame timing capture")
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.bottomMargin: Tokens.spacing.small
+            text: qsTr("A debugging aid, not something you'd normally leave running: captures a detailed per-stage timing breakdown of the next few frames on every connected monitor, so a stutter or a refresh-rate shortfall can be compared against real numbers instead of guessed at.")
+            color: Colours.palette.m3onSurfaceVariant
+            font: Tokens.font.label.small
+            wrapMode: Text.WordWrap
+        }
+
+        // qmllint disable unresolved-type
+        IronlandFrameCapture {
+            // qmllint enable unresolved-type
+            id: capture
+        }
+
+        RowButton {
+            first: true
+            icon: "speed"
+            text: capture.capturing ? qsTr("Capturing…") : qsTr("Capture next 3 frames")
+            subtext: qsTr("Every currently connected output, independently")
+            disabled: capture.capturing
+            onClicked: capture.capture(3)
+        }
+
+        RowButton {
+            last: true
+            icon: copyTimer.running ? "inventory" : "content_copy"
+            text: qsTr("Copy as JSON")
+            subtext: qsTr("For pasting into an issue, a chat, or another tool")
+            disabled: capture.frames.length === 0
+            onClicked: {
+                Quickshell.clipboardText = JSON.stringify(capture.frames, null, 2);
+                copyTimer.restart();
+            }
+
+            Timer {
+                id: copyTimer
+
+                interval: 1500
+            }
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.topMargin: Tokens.spacing.small
+            visible: capture.frames.length === 0
+            text: qsTr("No capture yet.")
+            color: Colours.palette.m3outline
+            font: Tokens.font.body.small
+        }
+
+        Canvas {
+            id: flameGraph
+
+            readonly property int laneHeight: 28
+            readonly property int labelWidth: 140
+            // Longest total duration across every captured frame, so every
+            // lane shares one time scale - a frame that's twice as slow as
+            // another should visibly look it.
+            readonly property real maxTotalUs: {
+                let max = 1;
+                for (const frame of capture.frames) {
+                    let total = 0;
+                    for (const stage of frame.stages) {
+                        total = Math.max(total, stage.startUs + stage.durationUs);
+                    }
+                    max = Math.max(max, total);
+                }
+                return max;
+            }
+
+            Layout.topMargin: Tokens.spacing.small
+            Layout.fillWidth: true
+            visible: capture.frames.length > 0
+            implicitHeight: capture.frames.length * laneHeight
+
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
+            onPaint: {
+                const ctx = getContext("2d");
+                ctx.clearRect(0, 0, width, height);
+                ctx.font = "11px sans-serif";
+                ctx.textBaseline = "middle";
+
+                const barLeft = labelWidth;
+                const barWidth = Math.max(1, width - labelWidth);
+                const pxPerUs = barWidth / maxTotalUs;
+
+                capture.frames.forEach((frame, row) => {
+                    const y = row * laneHeight;
+                    ctx.fillStyle = Colours.palette.m3onSurface;
+                    ctx.fillText(`${frame.output} #${frame.frameIndex}${frame.stutter ? " ⚠" : ""}`, 0, y + laneHeight / 2);
+
+                    for (const stage of frame.stages) {
+                        ctx.fillStyle = root.stageColor(stage.name);
+                        ctx.fillRect(barLeft + stage.startUs * pxPerUs, y + 3, Math.max(1, stage.durationUs * pxPerUs), laneHeight - 6);
+                    }
+                });
+            }
+
+            Connections {
+                function onFramesChanged() {
+                    flameGraph.requestPaint();
+                }
+
+                target: capture
+            }
         }
     }
 }
