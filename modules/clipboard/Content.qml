@@ -90,11 +90,20 @@ StyledRect {
 
             Layout.fillWidth: true
             visible: !root.isEmpty
+            // Grows with the entries (up to root's overall 900px cap, via
+            // inner's implicitWidth) rather than staying pinned to the
+            // header's width - StyledScrollBar.horizontal below takes over
+            // once that cap clips the content.
+            implicitWidth: row.implicitWidth
             implicitHeight: row.implicitHeight
             contentWidth: row.implicitWidth
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             flickableDirection: Flickable.HorizontalFlick
+
+            StyledScrollBar.horizontal: StyledScrollBar {
+                flickable: flick
+            }
 
             Row {
                 id: row

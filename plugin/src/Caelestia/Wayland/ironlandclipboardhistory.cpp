@@ -150,11 +150,23 @@ void IronlandClipboardHistory::restore(quint32 id) {
     }
 
     int fds[2];
-    if (pipe2(fds, O_CLOEXEC | O_NONBLOCK) != 0) {
+    // Only the read end (driven by the QSocketNotifier below) needs to be
+    // non-blocking - O_NONBLOCK is a file-status flag shared across
+    // duplicated descriptors, so setting it on the pipe as a whole would
+    // also make the write end non-blocking once passed to the compositor,
+    // risking a truncated/aborted write (and thus an empty read here,
+    // silently leaving the old clipboard content in place) if it doesn't
+    // fully drain in one non-blocking write.
+    if (pipe2(fds, O_CLOEXEC) != 0) {
         return;
     }
     const auto readFd = fds[0];
     const auto writeFd = fds[1];
+    if (fcntl(readFd, F_SETFL, O_NONBLOCK) != 0) {
+        close(readFd);
+        close(writeFd);
+        return;
+    }
 
     manager->receive(id, mimeType, writeFd);
     close(writeFd);

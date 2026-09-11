@@ -8,11 +8,61 @@ ScrollBar {
     id: root
 
     required property Flickable flickable
+    // True when attached via ScrollBar.horizontal (orientation is set
+    // automatically by that attached property).
+    readonly property bool isHorizontal: orientation === Qt.Horizontal
     property bool shouldBeActive
     property real nonAnimPosition
     property bool animating
     property bool _updatingFromFlickable: false
     property bool _updatingFromUser: false
+
+    // Extent (contentWidth/contentHeight) and viewport size (width/height)
+    // along the bar's own axis, and the flickable's current position on
+    // that axis - shared by every place below that maps between flickable
+    // content position and a [0, 1] bar position.
+    function extent(): real {
+        return isHorizontal ? flickable.contentWidth : flickable.contentHeight;
+    }
+
+    function viewSize(): real {
+        return isHorizontal ? flickable.width : flickable.height;
+    }
+
+    function contentPos(): real {
+        return isHorizontal ? flickable.contentX : flickable.contentY;
+    }
+
+    function setContentPos(pos: real): void {
+        if (isHorizontal)
+            flickable.contentX = pos;
+        else
+            flickable.contentY = pos;
+    }
+
+    // Maps a [0, 1-size] bar position to a flickable content position and
+    // applies it - used by both wheel and drag handling below.
+    function applyPosition(newPos: real): void {
+        const e = extent();
+        const v = viewSize();
+        if (e > v) {
+            const maxContentPos = e - v;
+            const maxPos = 1 - size;
+            const pos = maxPos > 0 ? (newPos / maxPos) * maxContentPos : 0;
+            setContentPos(Math.max(0, Math.min(maxContentPos, pos)));
+        }
+    }
+
+    // Sync nonAnimPosition with the flickable when not animating.
+    function syncFromFlickable(): void {
+        if (!animating && !fullMouse.pressed) {
+            _updatingFromFlickable = true;
+            const e = extent();
+            const v = viewSize();
+            nonAnimPosition = e > v ? Math.max(0, Math.min(1, contentPos() / (e - v))) : 0;
+            _updatingFromFlickable = false;
+        }
+    }
 
     onHoveredChanged: {
         if (hovered)
@@ -37,19 +87,17 @@ ScrollBar {
     }
 
     Component.onCompleted: {
-        if (flickable) {
-            const contentHeight = flickable.contentHeight;
-            const height = flickable.height;
-            if (contentHeight > height) {
-                nonAnimPosition = Math.max(0, Math.min(1, flickable.contentY / (contentHeight - height)));
-            }
-        }
+        if (flickable)
+            syncFromFlickable();
     }
-    implicitWidth: Tokens.padding.extraSmall
+    implicitWidth: isHorizontal ? 0 : Tokens.padding.extraSmall
+    implicitHeight: isHorizontal ? Tokens.padding.extraSmall : 0
 
     contentItem: StyledRect {
-        anchors.left: parent.left
-        anchors.right: parent.right
+        anchors.left: root.isHorizontal ? undefined : parent.left
+        anchors.right: root.isHorizontal ? undefined : parent.right
+        anchors.top: root.isHorizontal ? parent.top : undefined
+        anchors.bottom: root.isHorizontal ? parent.bottom : undefined
         opacity: {
             if (root.size === 1)
                 return 0;
@@ -82,18 +130,11 @@ ScrollBar {
 
     // Sync nonAnimPosition with flickable when not animating
     Connections {
+        function onContentXChanged() {
+            root.syncFromFlickable();
+        }
         function onContentYChanged() {
-            if (!root.animating && !fullMouse.pressed) {
-                root._updatingFromFlickable = true;
-                const contentHeight = root.flickable.contentHeight;
-                const height = root.flickable.height;
-                if (contentHeight > height) {
-                    root.nonAnimPosition = Math.max(0, Math.min(1, root.flickable.contentY / (contentHeight - height)));
-                } else {
-                    root.nonAnimPosition = 0;
-                }
-                root._updatingFromFlickable = false;
-            }
+            root.syncFromFlickable();
         }
 
         target: root.flickable
@@ -129,18 +170,7 @@ ScrollBar {
             else if (event.angleDelta.y < 0)
                 newPos = Math.min(1 - root.size, root.nonAnimPosition + 0.1);
             root.nonAnimPosition = newPos;
-            // Update flickable position
-            // Map scrollbar position [0, 1-size] to contentY [0, maxContentY]
-            if (root.flickable) {
-                const contentHeight = root.flickable.contentHeight;
-                const height = root.flickable.height;
-                if (contentHeight > height) {
-                    const maxContentY = contentHeight - height;
-                    const maxPos = 1 - root.size;
-                    const contentY = maxPos > 0 ? (newPos / maxPos) * maxContentY : 0;
-                    root.flickable.contentY = Math.max(0, Math.min(maxContentY, contentY));
-                }
-            }
+            root.applyPosition(newPos);
         }
 
         anchors.fill: parent
@@ -149,38 +179,20 @@ ScrollBar {
         onPressed: event => {
             root.animating = true;
             root._updatingFromUser = true;
-            const newPos = Math.max(0, Math.min(1 - root.size, event.y / root.height - root.size / 2));
+            const coord = root.isHorizontal ? event.x : event.y;
+            const extent = root.isHorizontal ? root.width : root.height;
+            const newPos = Math.max(0, Math.min(1 - root.size, coord / extent - root.size / 2));
             root.nonAnimPosition = newPos;
-            // Update flickable position
-            // Map scrollbar position [0, 1-size] to contentY [0, maxContentY]
-            if (root.flickable) {
-                const contentHeight = root.flickable.contentHeight;
-                const height = root.flickable.height;
-                if (contentHeight > height) {
-                    const maxContentY = contentHeight - height;
-                    const maxPos = 1 - root.size;
-                    const contentY = maxPos > 0 ? (newPos / maxPos) * maxContentY : 0;
-                    root.flickable.contentY = Math.max(0, Math.min(maxContentY, contentY));
-                }
-            }
+            root.applyPosition(newPos);
         }
 
         onPositionChanged: event => {
             root._updatingFromUser = true;
-            const newPos = Math.max(0, Math.min(1 - root.size, event.y / root.height - root.size / 2));
+            const coord = root.isHorizontal ? event.x : event.y;
+            const extent = root.isHorizontal ? root.width : root.height;
+            const newPos = Math.max(0, Math.min(1 - root.size, coord / extent - root.size / 2));
             root.nonAnimPosition = newPos;
-            // Update flickable position
-            // Map scrollbar position [0, 1-size] to contentY [0, maxContentY]
-            if (root.flickable) {
-                const contentHeight = root.flickable.contentHeight;
-                const height = root.flickable.height;
-                if (contentHeight > height) {
-                    const maxContentY = contentHeight - height;
-                    const maxPos = 1 - root.size;
-                    const contentY = maxPos > 0 ? (newPos / maxPos) * maxContentY : 0;
-                    root.flickable.contentY = Math.max(0, Math.min(maxContentY, contentY));
-                }
-            }
+            root.applyPosition(newPos);
         }
     }
 
