@@ -127,9 +127,6 @@ QtObject {
                     AppearancePage {}
                 }
                 Component {
-                    CapturePermissionsPage {}
-                }
-                Component {
                     PerformancePage {}
                 }
             }

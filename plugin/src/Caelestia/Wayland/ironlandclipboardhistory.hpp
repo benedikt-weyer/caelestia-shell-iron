@@ -17,9 +17,9 @@ namespace caelestia::wayland {
 //
 // Binding this global alone is unrestricted (see the protocol doc), but
 // receiving any `entry` requires this executable to be allowed through the
-// compositor's on-screen permission prompt (`ironland-permission-prompt-v1`,
-// already handled generically by IronlandPermissionPrompt - see
-// modules/elevation/Elevation.qml) the first time this shell runs against a
+// compositor's own on-screen permission prompt (`ironland-permission-prompt-v1`,
+// rendered and answered entirely compositor-side - no client, including this
+// shell, can see or influence it) the first time this shell runs against a
 // given compositor process.
 class IronlandClipboardHistoryManager
     : public QWaylandClientExtensionTemplate<IronlandClipboardHistoryManager>,
@@ -56,8 +56,7 @@ private:
 // existing id to the front instead of duplicating it on a repeat `entry` -
 // mirroring the compositor-side semantics (see the protocol doc).
 //
-// Exactly one of these should exist for the whole shell (mirrors
-// IronlandCapturePermissions/IronlandPermissionPrompt) - see
+// Exactly one of these should exist for the whole shell - see
 // services/ClipboardHistory.qml.
 class IronlandClipboardHistory : public QObject {
     Q_OBJECT

@@ -4,8 +4,6 @@ qml_module(caelestia-wayland
     SOURCES
         ironlandshortcut.cpp
         ironlandfocusgrab.cpp
-        ironlandpermissionprompt.cpp
-        ironlandcapturepermissions.cpp
         ironlandframecapture.cpp
         ironlandclipboardhistory.cpp
     LIBRARIES
@@ -20,8 +18,6 @@ caelestia_add_wayland_protocol(caelestia-wayland
     FILES
         "${CMAKE_SOURCE_DIR}/plugin/protocols/ironland-shortcuts-v1.xml"
         "${CMAKE_SOURCE_DIR}/plugin/protocols/ironland-focus-grab-v1.xml"
-        "${CMAKE_SOURCE_DIR}/plugin/protocols/ironland-permission-prompt-v1.xml"
-        "${CMAKE_SOURCE_DIR}/plugin/protocols/ironland-capture-permissions-v1.xml"
         "${CMAKE_SOURCE_DIR}/plugin/protocols/ironland-frame-capture-v1.xml"
         "${CMAKE_SOURCE_DIR}/plugin/protocols/ironland-clipboard-history-v1.xml"
 )
