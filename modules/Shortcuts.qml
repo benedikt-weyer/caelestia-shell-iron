@@ -140,6 +140,24 @@ Scope {
         onPressed: Audio.decrementVolume()
     }
 
+    // Owned entirely by the shell (via `ironland-shortcuts-v1`'s `bind`
+    // request, not the compositor's `[shortcuts]` config - see
+    // CustomShortcut/IronlandShortcut) since this only ever toggles this
+    // shell's own clipboard-history overlay, nothing compositor-side.
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        modifiers: ["super"]
+        key: "v"
+        description: "Toggle clipboard history"
+        onPressed: {
+            if (root.hasFullscreen)
+                return;
+            const screenState = ShellState.forActive();
+            screenState.clipboardHistory = !screenState.clipboardHistory;
+        }
+    }
+
     IpcHandler {
         function toggle(drawer: string): void {
             if (list().split("\n").includes(drawer)) {
