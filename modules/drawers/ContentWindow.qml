@@ -58,7 +58,13 @@ StyledWindow {
     name: "drawers"
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: fsTransitionProg > 0 && contentItem.Config.general.showOverFullscreen ? WlrLayer.Overlay : WlrLayer.Top
-    WlrLayershell.keyboardFocus: screenState.launcher || screenState.session ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    // Also requested for clipboardHistory - restoring an entry calls
+    // QClipboard::setText/setImage, and the compositor's wl_data_device
+    // only honours set_selection from a client that currently holds
+    // keyboard focus (see ironland-compositor's data_device dispatch) -
+    // without this, clicking an entry closes the overlay but silently
+    // fails to actually update the clipboard.
+    WlrLayershell.keyboardFocus: screenState.launcher || screenState.session || screenState.clipboardHistory ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     mask: hasFullscreen ? emptyRegion : regions
 
