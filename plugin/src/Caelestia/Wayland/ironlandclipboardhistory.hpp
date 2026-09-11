@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QtWaylandClient/QWaylandClientExtensionTemplate>
+#include <qbytearray.h>
 #include <qobject.h>
 #include <qqmlintegration.h>
 #include <qtmetamacros.h>
@@ -30,6 +31,7 @@ public:
 
 signals:
     void entryChanged(quint32 id, const QString& mimeTypes, const QString& preview);
+    void entryThumbnail(quint32 id, quint32 width, quint32 height, const QByteArray& bytes);
     void entryRemoved(quint32 id);
     void cleared();
     void denied();
@@ -37,6 +39,8 @@ signals:
 protected:
     void ironland_clipboard_history_manager_v1_entry(
         uint32_t id, const QString& mime_types, const QString& preview) override;
+    void ironland_clipboard_history_manager_v1_thumbnail(
+        uint32_t id, uint32_t width, uint32_t height, wl_array* bytes) override;
     void ironland_clipboard_history_manager_v1_removed(uint32_t id) override;
     void ironland_clipboard_history_manager_v1_cleared() override;
     void ironland_clipboard_history_manager_v1_denied() override;
@@ -92,12 +96,18 @@ private:
         quint32 id;
         QString mimeType;
         QString preview;
+        // Only set for an image entry (its `thumbnail` event always follows
+        // its `entry` event - see the protocol doc) - a
+        // "data:image/png;base64,..." URI, directly usable as an
+        // `Image.source`. Empty for a text entry.
+        QString thumbnail;
     };
 
     QList<Entry> m_entries;
     bool m_denied = false;
 
     void upsert(quint32 id, const QString& mimeTypes, const QString& preview);
+    void setThumbnail(quint32 id, const QByteArray& bytes);
 };
 
 } // namespace caelestia::wayland

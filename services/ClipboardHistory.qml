@@ -12,8 +12,11 @@ import Caelestia.Wayland
 Singleton {
     id: root
 
-    // Most-recent-first list of {id, mimeType, preview} objects - directly
-    // usable as a ListView/Repeater model.
+    // Most-recent-first list of {id, mimeType, preview, thumbnail} objects -
+    // directly usable as a ListView/Repeater model. `thumbnail` is a
+    // "data:image/png;base64,..." URI (usable directly as an
+    // `Image.source`) for an image entry, or an empty string for a text
+    // one.
     readonly property alias entries: history.entries
     // True once the compositor has denied this shell clipboard-history
     // access (see the protocol's `denied` event) - this is permanent for

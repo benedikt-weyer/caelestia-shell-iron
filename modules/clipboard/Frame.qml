@@ -4,6 +4,7 @@ import QtQuick
 import Caelestia.Config
 import qs.components
 import qs.components.controls
+import qs.components.effects
 import qs.services
 
 // One clipboard-history entry. Clicking its body restores it to the system
@@ -35,11 +36,36 @@ StyledRect {
         }
     }
 
+    Image {
+        anchors.fill: parent
+        anchors.margins: 1 // Stay inside root's border
+
+        visible: root.modelData.thumbnail.length > 0
+        source: root.modelData.thumbnail
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+
+        layer.enabled: true
+        layer.effect: Mask {
+            maskSource: mask
+        }
+
+        StyledRect {
+            id: mask
+
+            anchors.fill: parent
+            layer.enabled: true
+            visible: false
+            radius: root.radius
+        }
+    }
+
     StyledText {
         anchors.fill: parent
         anchors.margins: Tokens.padding.small
         anchors.topMargin: Tokens.padding.small + 18
 
+        visible: root.modelData.thumbnail.length === 0
         text: root.modelData.preview
         color: Colours.palette.m3onSurface
         font: Tokens.font.body.small

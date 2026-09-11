@@ -1,5 +1,6 @@
 #include "ironlandclipboardhistory.hpp"
 
+#include <algorithm>
 #include <cerrno>
 #include <fcntl.h>
 #include <unistd.h>
@@ -7,13 +8,14 @@
 #include <QByteArray>
 #include <QClipboard>
 #include <QGuiApplication>
+#include <QImage>
 #include <QList>
 #include <QSocketNotifier>
 
 namespace caelestia::wayland {
 
 IronlandClipboardHistoryManager::IronlandClipboardHistoryManager()
-    : QWaylandClientExtensionTemplate<IronlandClipboardHistoryManager>(1) {}
+    : QWaylandClientExtensionTemplate<IronlandClipboardHistoryManager>(2) {}
 
 IronlandClipboardHistoryManager* IronlandClipboardHistoryManager::instance() {
     static IronlandClipboardHistoryManager manager;
@@ -23,6 +25,12 @@ IronlandClipboardHistoryManager* IronlandClipboardHistoryManager::instance() {
 void IronlandClipboardHistoryManager::ironland_clipboard_history_manager_v1_entry(
     uint32_t id, const QString& mime_types, const QString& preview) {
     emit entryChanged(id, mime_types, preview);
+}
+
+void IronlandClipboardHistoryManager::ironland_clipboard_history_manager_v1_thumbnail(
+    uint32_t id, uint32_t width, uint32_t height, wl_array* bytes) {
+    emit entryThumbnail(id, width, height,
+        QByteArray(static_cast<const char*>(bytes->data), static_cast<qsizetype>(bytes->size)));
 }
 
 void IronlandClipboardHistoryManager::ironland_clipboard_history_manager_v1_removed(uint32_t id) {
@@ -44,6 +52,8 @@ IronlandClipboardHistory::IronlandClipboardHistory(QObject* parent)
         [this](quint32 id, const QString& mimeTypes, const QString& preview) {
             upsert(id, mimeTypes, preview);
         });
+    connect(manager, &IronlandClipboardHistoryManager::entryThumbnail, this,
+        [this](quint32 id, quint32, quint32, const QByteArray& bytes) { setThumbnail(id, bytes); });
     connect(manager, &IronlandClipboardHistoryManager::entryRemoved, this, [this](quint32 id) {
         const auto removed = m_entries.removeIf([id](const Entry& e) { return e.id == id; });
         if (removed > 0) {
@@ -69,7 +79,20 @@ void IronlandClipboardHistory::upsert(quint32 id, const QString& mimeTypes, cons
     const auto mimeType = mimeTypes.section(QLatin1Char(' '), 0, 0);
 
     m_entries.removeIf([id](const Entry& e) { return e.id == id; });
-    m_entries.prepend(Entry{id, mimeType, preview});
+    m_entries.prepend(Entry{id, mimeType, preview, QString()});
+    emit entriesChanged();
+}
+
+void IronlandClipboardHistory::setThumbnail(quint32 id, const QByteArray& bytes) {
+    // The `thumbnail` event always immediately follows the `entry` event it
+    // belongs to (see the protocol doc), so the entry is always already
+    // upserted by the time this runs.
+    const auto it = std::find_if(m_entries.begin(), m_entries.end(), [id](const Entry& e) { return e.id == id; });
+    if (it == m_entries.end()) {
+        return;
+    }
+
+    it->thumbnail = QStringLiteral("data:image/png;base64,") + QString::fromLatin1(bytes.toBase64());
     emit entriesChanged();
 }
 
@@ -81,6 +104,7 @@ QVariantList IronlandClipboardHistory::entries() const {
         item[QStringLiteral("id")] = entry.id;
         item[QStringLiteral("mimeType")] = entry.mimeType;
         item[QStringLiteral("preview")] = entry.preview;
+        item[QStringLiteral("thumbnail")] = entry.thumbnail;
         list.append(item);
     }
     return list;
@@ -142,7 +166,7 @@ void IronlandClipboardHistory::restore(quint32 id) {
     // however long the other end takes.
     auto* buffer = new QByteArray();
     auto* notifier = new QSocketNotifier(readFd, QSocketNotifier::Read, this);
-    connect(notifier, &QSocketNotifier::activated, notifier, [notifier, readFd, buffer]() {
+    connect(notifier, &QSocketNotifier::activated, notifier, [notifier, readFd, buffer, mimeType]() {
         char chunk[8192];
         const auto n = read(readFd, chunk, sizeof(chunk));
         if (n > 0) {
@@ -157,7 +181,14 @@ void IronlandClipboardHistory::restore(quint32 id) {
         }
         notifier->setEnabled(false);
         if (!buffer->isEmpty()) {
-            QGuiApplication::clipboard()->setText(QString::fromUtf8(*buffer));
+            if (mimeType.startsWith(QStringLiteral("image/"))) {
+                QImage image;
+                if (image.loadFromData(*buffer)) {
+                    QGuiApplication::clipboard()->setImage(image);
+                }
+            } else {
+                QGuiApplication::clipboard()->setText(QString::fromUtf8(*buffer));
+            }
         }
         close(readFd);
         delete buffer;
