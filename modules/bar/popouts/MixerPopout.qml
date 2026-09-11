@@ -14,7 +14,11 @@ Item {
 
     required property PopoutState popouts
 
-    implicitWidth: layout.implicitWidth + Tokens.padding.medium * 2
+    // layout's width is pinned to Tokens.sizes.bar.mixerWidth rather than
+    // sized from its content, so root must size off that actual width, not
+    // layout.implicitWidth (which reflects the narrower content and cut the
+    // popout off on the right).
+    implicitWidth: layout.width + Tokens.padding.medium * 2
     implicitHeight: layout.implicitHeight + Tokens.padding.medium * 2
 
     ColumnLayout {
