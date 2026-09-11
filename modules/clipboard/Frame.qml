@@ -6,9 +6,9 @@ import qs.components
 import qs.components.controls
 import qs.services
 
-// One "frame" of the film strip: a single clipboard-history entry. Clicking
-// its body restores it to the system clipboard and closes the overlay;
-// its own remove button only removes that one entry.
+// One clipboard-history entry. Clicking its body restores it to the system
+// clipboard and closes the overlay; its own remove button only removes that
+// one entry.
 StyledRect {
     id: root
 

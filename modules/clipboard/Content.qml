@@ -8,10 +8,9 @@ import qs.components.containers
 import qs.components.controls
 import qs.services
 
-// The clipboard-history overlay itself: a horizontally scrolling "film
-// strip" of captured entries (see Frame.qml), sprocket-hole perforations
-// along the top and bottom evoking an actual strip of film, with a remove
-// button per frame (Frame.qml) and a "Clear all" button here.
+// The clipboard-history overlay itself: a horizontally scrolling row of
+// captured entries (see Frame.qml), with a remove button per entry
+// (Frame.qml) and a "Clear all" button here.
 StyledRect {
     id: root
 
@@ -86,62 +85,28 @@ StyledRect {
             font: Tokens.font.body.small
         }
 
-        ColumnLayout {
+        StyledFlickable {
+            id: flick
+
             Layout.fillWidth: true
             visible: !root.isEmpty
-            spacing: Tokens.spacing.extraSmall
+            implicitHeight: row.implicitHeight
+            contentWidth: row.implicitWidth
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            flickableDirection: Flickable.HorizontalFlick
 
-            Perforation {
-                Layout.fillWidth: true
-            }
+            Row {
+                id: row
 
-            StyledFlickable {
-                id: flick
+                spacing: Tokens.spacing.small
 
-                Layout.fillWidth: true
-                implicitHeight: row.implicitHeight
-                contentWidth: row.implicitWidth
-                clip: true
-                boundsBehavior: Flickable.StopAtBounds
-                flickableDirection: Flickable.HorizontalFlick
+                Repeater {
+                    model: root.entries
 
-                Row {
-                    id: row
-
-                    spacing: Tokens.spacing.small
-
-                    Repeater {
-                        model: root.entries
-
-                        Frame {
-                            onRestored: root.screenState.clipboardHistory = false
-                        }
+                    Frame {
+                        onRestored: root.screenState.clipboardHistory = false
                     }
-                }
-            }
-
-            Perforation {
-                Layout.fillWidth: true
-            }
-        }
-    }
-
-    // A row of small evenly-spaced circles, the film-strip sprocket holes.
-    component Perforation: Item {
-        implicitHeight: 6
-
-        Row {
-            anchors.centerIn: parent
-            spacing: 10
-
-            Repeater {
-                model: Math.max(0, Math.floor(parent.parent.width / 16))
-
-                Rectangle {
-                    width: 6
-                    height: 6
-                    radius: 3
-                    color: Colours.palette.m3outlineVariant
                 }
             }
         }
