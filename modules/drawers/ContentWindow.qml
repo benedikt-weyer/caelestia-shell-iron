@@ -172,6 +172,13 @@ StyledWindow {
         }
 
         PanelBg {
+            id: clipboardHistoryBg
+
+            panel: panels.clipboardHistory
+            deformAmount: 0.1
+        }
+
+        PanelBg {
             id: launcherBg
 
             panel: panels.launcher
@@ -263,6 +270,9 @@ StyledWindow {
 
             dashboard.transform: Matrix4x4 {
                 matrix: dashBg.deformMatrix
+            }
+            clipboardHistory.transform: Matrix4x4 {
+                matrix: clipboardHistoryBg.deformMatrix
             }
             launcher.transform: Matrix4x4 {
                 matrix: launcherBg.deformMatrix
