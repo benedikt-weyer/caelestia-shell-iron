@@ -55,7 +55,11 @@ StyledRect {
 
             anchors.fill: parent
             layer.enabled: true
-            visible: false
+            // Not `visible: false` - an item's layer only renders while
+            // it's visible (see e.g. CoverArt.qml/ProfilePic.qml's own
+            // mask sources), so that would leave maskSource with no
+            // texture and crash the effect once an image entry appears.
+            opacity: 0
             radius: root.radius
         }
     }
