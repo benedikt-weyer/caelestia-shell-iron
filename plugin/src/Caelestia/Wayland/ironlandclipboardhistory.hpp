@@ -31,7 +31,13 @@ public:
 
 signals:
     void entryChanged(quint32 id, const QString& mimeTypes, const QString& preview);
-    void entryThumbnail(quint32 id, quint32 width, quint32 height, const QByteArray& bytes);
+    // Announcement only - no pixels. A granted listener fetches the actual
+    // thumbnail PNG itself, over a pipe via `receive_thumbnail` (see
+    // IronlandClipboardHistory::fetchThumbnail), the same way `restore`
+    // already fetches an entry's full content via `receive` - both exist
+    // because Wayland's wire protocol caps a single message's size well
+    // below what even a small downscaled image can reach once PNG-encoded.
+    void entryThumbnail(quint32 id, quint32 width, quint32 height);
     void entryRemoved(quint32 id);
     void cleared();
     void denied();
@@ -40,7 +46,7 @@ protected:
     void ironland_clipboard_history_manager_v1_entry(
         uint32_t id, const QString& mime_types, const QString& preview) override;
     void ironland_clipboard_history_manager_v1_thumbnail(
-        uint32_t id, uint32_t width, uint32_t height, wl_array* bytes) override;
+        uint32_t id, uint32_t width, uint32_t height) override;
     void ironland_clipboard_history_manager_v1_removed(uint32_t id) override;
     void ironland_clipboard_history_manager_v1_cleared() override;
     void ironland_clipboard_history_manager_v1_denied() override;
@@ -107,6 +113,11 @@ private:
 
     void upsert(quint32 id, const QString& mimeTypes, const QString& preview);
     void setThumbnail(quint32 id, const QByteArray& bytes);
+    // Fetches `id`'s thumbnail PNG over a pipe via `receive_thumbnail`
+    // (see the protocol doc), then calls setThumbnail once it arrives - the
+    // `thumbnail` event itself only announces one exists (id/width/height),
+    // it doesn't carry the pixels.
+    void fetchThumbnail(quint32 id);
 };
 
 } // namespace caelestia::wayland

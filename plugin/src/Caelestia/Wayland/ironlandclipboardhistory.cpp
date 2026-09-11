@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <cerrno>
 #include <fcntl.h>
+#include <functional>
 #include <unistd.h>
+#include <utility>
 
 #include <QByteArray>
 #include <QClipboard>
@@ -14,8 +16,63 @@
 
 namespace caelestia::wayland {
 
+namespace {
+
+// A pipe suitable for a `receive`/`receive_thumbnail` request: only the
+// read end needs O_NONBLOCK - it's a file-status flag shared across
+// duplicated descriptors, so setting it on the pipe as a whole would also
+// make the write end non-blocking once passed to the compositor, risking a
+// truncated/aborted write (and thus a truncated read here) if it doesn't
+// fully drain in one non-blocking write. {-1, -1} on failure.
+std::pair<int, int> makeReceivePipe() {
+    int fds[2];
+    if (pipe2(fds, O_CLOEXEC) != 0) {
+        return {-1, -1};
+    }
+    if (fcntl(fds[0], F_SETFL, O_NONBLOCK) != 0) {
+        close(fds[0]);
+        close(fds[1]);
+        return {-1, -1};
+    }
+    return {fds[0], fds[1]};
+}
+
+// Reads `readFd` (set up by makeReceivePipe, already handed to the
+// compositor as a request's write end) asynchronously until it's closed
+// (end of data), then calls `onDone` with whatever was read and cleans up -
+// shared between restoring an entry's full content and fetching an image
+// entry's thumbnail, both of which the compositor streams back over a pipe
+// rather than inlining into a Wayland message (see the protocol doc for
+// why). `parent` owns the QSocketNotifier this creates.
+void readPipeUntilEof(int readFd, QObject* parent, std::function<void(const QByteArray&)> onDone) {
+    auto* buffer = new QByteArray();
+    auto* notifier = new QSocketNotifier(readFd, QSocketNotifier::Read, parent);
+    QObject::connect(notifier, &QSocketNotifier::activated, notifier,
+        [notifier, readFd, buffer, onDone = std::move(onDone)]() {
+            char chunk[8192];
+            const auto n = read(readFd, chunk, sizeof(chunk));
+            if (n > 0) {
+                buffer->append(chunk, n);
+                return;
+            }
+            // n == 0 (EOF) or n < 0 with anything other than "try again"
+            // both end the read - either way there's nothing more usable to
+            // wait for.
+            if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+                return;
+            }
+            notifier->setEnabled(false);
+            onDone(*buffer);
+            close(readFd);
+            delete buffer;
+            notifier->deleteLater();
+        });
+}
+
+} // namespace
+
 IronlandClipboardHistoryManager::IronlandClipboardHistoryManager()
-    : QWaylandClientExtensionTemplate<IronlandClipboardHistoryManager>(2) {}
+    : QWaylandClientExtensionTemplate<IronlandClipboardHistoryManager>(3) {}
 
 IronlandClipboardHistoryManager* IronlandClipboardHistoryManager::instance() {
     static IronlandClipboardHistoryManager manager;
@@ -28,9 +85,8 @@ void IronlandClipboardHistoryManager::ironland_clipboard_history_manager_v1_entr
 }
 
 void IronlandClipboardHistoryManager::ironland_clipboard_history_manager_v1_thumbnail(
-    uint32_t id, uint32_t width, uint32_t height, wl_array* bytes) {
-    emit entryThumbnail(id, width, height,
-        QByteArray(static_cast<const char*>(bytes->data), static_cast<qsizetype>(bytes->size)));
+    uint32_t id, uint32_t width, uint32_t height) {
+    emit entryThumbnail(id, width, height);
 }
 
 void IronlandClipboardHistoryManager::ironland_clipboard_history_manager_v1_removed(uint32_t id) {
@@ -53,7 +109,7 @@ IronlandClipboardHistory::IronlandClipboardHistory(QObject* parent)
             upsert(id, mimeTypes, preview);
         });
     connect(manager, &IronlandClipboardHistoryManager::entryThumbnail, this,
-        [this](quint32 id, quint32, quint32, const QByteArray& bytes) { setThumbnail(id, bytes); });
+        [this](quint32 id, quint32, quint32) { fetchThumbnail(id); });
     connect(manager, &IronlandClipboardHistoryManager::entryRemoved, this, [this](quint32 id) {
         const auto removed = m_entries.removeIf([id](const Entry& e) { return e.id == id; });
         if (removed > 0) {
@@ -81,6 +137,27 @@ void IronlandClipboardHistory::upsert(quint32 id, const QString& mimeTypes, cons
     m_entries.removeIf([id](const Entry& e) { return e.id == id; });
     m_entries.prepend(Entry{id, mimeType, preview, QString()});
     emit entriesChanged();
+}
+
+void IronlandClipboardHistory::fetchThumbnail(quint32 id) {
+    auto* manager = IronlandClipboardHistoryManager::instance();
+    if (!manager->isActive()) {
+        return;
+    }
+
+    const auto [readFd, writeFd] = makeReceivePipe();
+    if (readFd < 0) {
+        return;
+    }
+
+    manager->receive_thumbnail(id, writeFd);
+    close(writeFd);
+
+    readPipeUntilEof(readFd, this, [this, id](const QByteArray& bytes) {
+        if (!bytes.isEmpty()) {
+            setThumbnail(id, bytes);
+        }
+    });
 }
 
 void IronlandClipboardHistory::setThumbnail(quint32 id, const QByteArray& bytes) {
@@ -149,22 +226,8 @@ void IronlandClipboardHistory::restore(quint32 id) {
         return;
     }
 
-    int fds[2];
-    // Only the read end (driven by the QSocketNotifier below) needs to be
-    // non-blocking - O_NONBLOCK is a file-status flag shared across
-    // duplicated descriptors, so setting it on the pipe as a whole would
-    // also make the write end non-blocking once passed to the compositor,
-    // risking a truncated/aborted write (and thus an empty read here,
-    // silently leaving the old clipboard content in place) if it doesn't
-    // fully drain in one non-blocking write.
-    if (pipe2(fds, O_CLOEXEC) != 0) {
-        return;
-    }
-    const auto readFd = fds[0];
-    const auto writeFd = fds[1];
-    if (fcntl(readFd, F_SETFL, O_NONBLOCK) != 0) {
-        close(readFd);
-        close(writeFd);
+    const auto [readFd, writeFd] = makeReceivePipe();
+    if (readFd < 0) {
         return;
     }
 
@@ -176,35 +239,18 @@ void IronlandClipboardHistory::restore(quint32 id) {
     // description) - mirrors the non-blocking read `crate::clipboard` does
     // compositor-side for the same reason: never block the event loop on
     // however long the other end takes.
-    auto* buffer = new QByteArray();
-    auto* notifier = new QSocketNotifier(readFd, QSocketNotifier::Read, this);
-    connect(notifier, &QSocketNotifier::activated, notifier, [notifier, readFd, buffer, mimeType]() {
-        char chunk[8192];
-        const auto n = read(readFd, chunk, sizeof(chunk));
-        if (n > 0) {
-            buffer->append(chunk, n);
+    readPipeUntilEof(readFd, this, [mimeType](const QByteArray& bytes) {
+        if (bytes.isEmpty()) {
             return;
         }
-        // n == 0 (EOF) or n < 0 with anything other than "try again" both
-        // end the read - either way there's nothing more usable to wait
-        // for.
-        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-            return;
-        }
-        notifier->setEnabled(false);
-        if (!buffer->isEmpty()) {
-            if (mimeType.startsWith(QStringLiteral("image/"))) {
-                QImage image;
-                if (image.loadFromData(*buffer)) {
-                    QGuiApplication::clipboard()->setImage(image);
-                }
-            } else {
-                QGuiApplication::clipboard()->setText(QString::fromUtf8(*buffer));
+        if (mimeType.startsWith(QStringLiteral("image/"))) {
+            QImage image;
+            if (image.loadFromData(bytes)) {
+                QGuiApplication::clipboard()->setImage(image);
             }
+        } else {
+            QGuiApplication::clipboard()->setText(QString::fromUtf8(bytes));
         }
-        close(readFd);
-        delete buffer;
-        notifier->deleteLater();
     });
 }
 
