@@ -185,10 +185,42 @@ Variants {
             id: contextMenu
 
             readonly property var target: win.menuTarget
-            readonly property list<MenuItem> menuItems: target ? (target.group.windows.length > 0 ? [target.openItem, target.pinItem, target.floatItem, target.quitItem] : [target.openItem, target.pinItem]) : []
+            // The app's own jump-list entries (XDG "Desktop Actions", e.g. a
+            // browser's "New Private Window") - empty for an app with none,
+            // or one Apps/DesktopEntries doesn't know about (not running
+            // from a .desktop file).
+            readonly property var desktopEntry: target ? DesktopEntries.byId(target.group.appId) : null
+            readonly property var actionItems: {
+                const items = [];
+                for (let i = 0; i < actionInstantiator.count; i++)
+                    items.push(actionInstantiator.objectAt(i));
+                return items;
+            }
+            readonly property list<MenuItem> menuItems: target ? (target.group.windows.length > 0 ? [target.openItem, target.pinItem, ...contextMenu.actionItems, target.floatItem, target.quitItem] : [target.openItem, target.pinItem, ...contextMenu.actionItems]) : []
 
             visible: target !== null
             color: "transparent"
+
+            Instantiator {
+                id: actionInstantiator
+
+                model: contextMenu.desktopEntry?.actions ?? []
+
+                delegate: MenuItem {
+                    id: actionMenuItem
+
+                    required property DesktopAction modelData
+
+                    text: modelData.name
+                    // modelData.icon is a freedesktop icon name/path, not a
+                    // Material Symbols ligature like every other entry here
+                    // (see MaterialIcon below) - a generic glyph reads
+                    // better than mismatched or missing icon text.
+                    icon: "arrow_outward"
+
+                    onClicked: actionMenuItem.modelData.execute()
+                }
+            }
 
             anchor.item: target?.anchorItem ?? null
             anchor.edges: Edges.Top
