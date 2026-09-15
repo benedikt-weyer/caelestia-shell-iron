@@ -54,6 +54,8 @@ Singleton {
             workspace_right: qsTr("Switch workspace: next"),
             move_workspace_left: qsTr("Move window to workspace: previous"),
             move_workspace_right: qsTr("Move window to workspace: next"),
+            move_workspace_left_follow: qsTr("Move window to workspace and follow: previous"),
+            move_workspace_right_follow: qsTr("Move window to workspace and follow: next"),
             scale_up: qsTr("Increase output scale"),
             scale_down: qsTr("Decrease output scale"),
             toggle_preview: qsTr("Toggle window preview"),
