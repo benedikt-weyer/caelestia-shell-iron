@@ -383,7 +383,7 @@ Variants {
 
                 MouseArea {
                     anchors.fill: parent
-                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                     preventStealing: true
                     cursorShape: icon.dragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
 
@@ -393,7 +393,7 @@ Variants {
                     }
 
                     onPositionChanged: e => {
-                        if (!icon.pinned || !pressed)
+                        if (!icon.pinned || !(pressedButtons & Qt.LeftButton))
                             return;
 
                         const abs = iconRoot.mapToItem(row, e.x, 0).x;
@@ -416,6 +416,8 @@ Variants {
                                 row.movePinned(icon.group.appId, hit.index);
                         } else if (e.button === Qt.RightButton) {
                             icon.dock.menuTarget = icon.dock.menuTarget === icon ? null : icon;
+                        } else if (e.button === Qt.MiddleButton) {
+                            icon.launch();
                         } else {
                             icon.primaryAction();
                         }
