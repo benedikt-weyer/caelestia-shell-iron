@@ -21,9 +21,14 @@ ConnectedRect {
     property alias validator: input.validator
     property bool smallField
     readonly property alias field: input
+    // Shows a "reset to default" icon button after the field - callers
+    // decide when that's warranted (typically: current value differs from
+    // the default) rather than this component knowing what "default" means.
+    property bool showReset: false
 
     signal valueEdited(value: string)
     signal editingFinished(value: string)
+    signal resetRequested
 
     function clear(): void {
         input.clear();
@@ -82,6 +87,17 @@ ConnectedRect {
 
             onTextEdited: root.valueEdited(text)
             onEditingFinished: root.editingFinished(text)
+        }
+
+        IconButton {
+            type: IconButton.Text
+            isRound: true
+            icon: "restart_alt"
+            font: Tokens.font.icon.medium
+            label.fill: 0
+            visible: root.showReset
+
+            onClicked: root.resetRequested()
         }
     }
 }

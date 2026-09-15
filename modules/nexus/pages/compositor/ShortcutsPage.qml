@@ -14,6 +14,10 @@ PageBase {
     readonly property var knownActions: Object.keys(IronlandCtl.actionLabels)
     property var events: null // {configured: {name: [combos]}, suggested: [name...]}
     property string newEventName: ""
+    // The compositor's built-in defaults, loaded once on page load, so each
+    // action's reset button (see TextFieldRow) can tell whether its current
+    // combo list has actually been customized.
+    property var defaults: null
 
     function refreshEvents(): void {
         IronlandCtl.shortcutsEventsList(result => root.events = result);
@@ -21,6 +25,10 @@ PageBase {
 
     function combosText(action: string): string {
         return (root.cfg?.shortcuts[action] ?? []).join(", ");
+    }
+
+    function defaultCombosText(action: string): string {
+        return (root.defaults?.shortcuts[action] ?? []).join(", ");
     }
 
     function commitAction(action: string, value: string): void {
@@ -40,7 +48,10 @@ PageBase {
     title: qsTr("Shortcuts")
     isSubPage: true
 
-    Component.onCompleted: root.refreshEvents()
+    Component.onCompleted: {
+        root.refreshEvents();
+        IronlandCtl.loadDefaults(result => root.defaults = result);
+    }
 
     ColumnLayout {
         anchors.horizontalCenter: parent.horizontalCenter
@@ -80,7 +91,9 @@ PageBase {
                 label: IronlandCtl.actionLabel(modelData)
                 placeholderText: qsTr("e.g. super+shift+q")
                 value: root.combosText(modelData)
+                showReset: root.defaults !== null && root.combosText(modelData) !== root.defaultCombosText(modelData)
                 onEditingFinished: v => root.commitAction(modelData, v)
+                onResetRequested: root.commitAction(modelData, root.defaultCombosText(modelData))
             }
         }
 
