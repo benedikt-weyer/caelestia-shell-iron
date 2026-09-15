@@ -185,7 +185,7 @@ Variants {
             id: contextMenu
 
             readonly property var target: win.menuTarget
-            readonly property list<MenuItem> menuItems: target ? (target.group.windows.length > 0 ? [target.openItem, target.pinItem, target.quitItem] : [target.openItem, target.pinItem]) : []
+            readonly property list<MenuItem> menuItems: target ? (target.group.windows.length > 0 ? [target.openItem, target.pinItem, target.floatItem, target.quitItem] : [target.openItem, target.pinItem]) : []
 
             visible: target !== null
             color: "transparent"
@@ -297,9 +297,14 @@ Variants {
         readonly property alias anchorItem: iconRoot
         readonly property alias openItem: openItem
         readonly property alias pinItem: pinItem
+        readonly property alias floatItem: floatItem
         readonly property alias quitItem: quitItem
 
         readonly property bool active: group.windows.some(w => w.activated)
+        // Whether toggling right now would float (true) or tile (false) the
+        // group's windows - if they're a mix, treat any-floating as "still
+        // floating" so the action always reads as "put everything back".
+        readonly property bool anyFloating: group.windows.some(w => Hypr.isFloating(w))
 
         function primaryAction(): void {
             if (group.windows.length > 0)
@@ -328,6 +333,15 @@ Variants {
         function quit(): void {
             for (const w of icon.group.windows)
                 w.close();
+        }
+
+        // Toggles every window of this app between floating and tiled
+        // together, so the menu label always reflects what the action is
+        // about to do (see anyFloating).
+        function toggleFloating(): void {
+            const floating = !icon.anyFloating;
+            for (const w of icon.group.windows)
+                Hypr.setFloating(w, floating);
         }
 
         implicitWidth: content.implicitWidth
@@ -424,6 +438,15 @@ Variants {
                     text: icon.pinned ? qsTr("Unpin from dock") : qsTr("Pin to dock")
 
                     onClicked: icon.togglePin()
+                }
+
+                MenuItem {
+                    id: floatItem
+
+                    icon: icon.anyFloating ? "dock_to_bottom" : "picture_in_picture"
+                    text: icon.anyFloating ? qsTr("Tile") : qsTr("Float")
+
+                    onClicked: icon.toggleFloating()
                 }
 
                 MenuItem {

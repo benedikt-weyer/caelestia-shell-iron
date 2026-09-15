@@ -15,7 +15,7 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    // output name -> array of {index, name, active, windows: [{title, appId}]}
+    // output name -> array of {index, name, active, windows: [{title, appId, floating}]}
     property var outputs: ({})
 
     function workspacesFor(outputName: string): var {
@@ -27,6 +27,22 @@ Singleton {
             activate: {
                 output: outputName,
                 index: index
+            }
+        })}\n`);
+    }
+
+    // Best-effort, same as `windows` itself: matches the target window by
+    // title+appId within the given output/workspace. A no-op if the
+    // compositor doesn't support `ironland-workspace-windows-v1` or nothing
+    // matches.
+    function setFloating(outputName: string, index: int, title: string, appId: string, floating: bool): void {
+        proc.write(`${JSON.stringify({
+            setFloating: {
+                output: outputName,
+                index: index,
+                title: title,
+                appId: appId,
+                floating: floating
             }
         })}\n`);
     }
