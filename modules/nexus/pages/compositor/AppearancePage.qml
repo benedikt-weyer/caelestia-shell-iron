@@ -69,6 +69,28 @@ PageBase {
         }
 
         SectionHeader {
+            text: qsTr("Window animations")
+        }
+
+        ToggleRow {
+            first: true
+            text: qsTr("Animate tiled windows opening/closing")
+            subtext: qsTr("A bit of bounce as auto-tiled windows grow in or reflow around one that closed")
+            checked: root.cfg?.window_animations.enabled ?? false
+            onToggled: IronlandCtl.setValue("window_animations.enabled", checked ? "true" : "false")
+        }
+
+        StepperRow {
+            last: true
+            label: qsTr("Animation duration")
+            value: root.cfg?.window_animations.duration_ms ?? 260
+            from: 0
+            to: 1000
+            stepSize: 20
+            onMoved: v => IronlandCtl.setValue("window_animations.duration_ms", String(v))
+        }
+
+        SectionHeader {
             text: qsTr("Rounded corners")
         }
 
