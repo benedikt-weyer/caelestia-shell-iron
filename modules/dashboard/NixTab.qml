@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import Caelestia.Config
 import qs.components
 import qs.components.containers
@@ -143,6 +144,24 @@ Item {
                         }
                         color: root.failed ? Colours.palette.m3error : Colours.palette.m3onSurface
                         elide: Text.ElideRight
+                    }
+
+                    IconButton {
+                        visible: root.failed
+                        icon: copyTimer.running ? "inventory" : "content_copy"
+                        type: IconButton.Text
+                        isRound: true
+                        font: Tokens.font.icon.medium
+                        onClicked: {
+                            Quickshell.clipboardText = NixBackend.errorText();
+                            copyTimer.restart();
+                        }
+
+                        Timer {
+                            id: copyTimer
+
+                            interval: 2000
+                        }
                     }
                 }
 

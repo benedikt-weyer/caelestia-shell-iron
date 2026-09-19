@@ -62,6 +62,22 @@ Singleton {
         }
     }
 
+    // Plain-text error report for pasting into an issue or chat: the status
+    // message, the RPC error (if distinct), then every error line from the log.
+    function errorText(): string {
+        const parts = [];
+        if (root.statusMessage)
+            parts.push(root.statusMessage);
+        if (root.lastError && root.lastError !== root.statusMessage)
+            parts.push(root.lastError);
+        for (let i = 0; i < root.log.count; i++) {
+            const entry = root.log.get(i);
+            if (entry.isError)
+                parts.push(entry.message);
+        }
+        return parts.join("\n");
+    }
+
     function clearLog(): void {
         root.log.clear();
     }
