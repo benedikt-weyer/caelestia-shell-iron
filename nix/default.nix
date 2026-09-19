@@ -109,7 +109,11 @@
     name = "caelestia-qml-plugin${lib.optionalString debug "-debug"}";
     src = lib.fileset.toSource {
       root = ./..;
-      fileset = lib.fileset.union ./../CMakeLists.txt ./../plugin;
+      # plugin/src/Caelestia/NixBackend codegens its gRPC bindings straight
+      # from this .proto at build time (see plugin/cmake/grpc-proto.cmake) -
+      # the rest of nix-backend-generic (the Rust crate) is built and
+      # packaged separately, see nixBackendGeneric below.
+      fileset = lib.fileset.unions [./../CMakeLists.txt ./../plugin ./../nix-backend-generic/proto];
     };
 
     nativeBuildInputs = [cmake ninja pkg-config];
