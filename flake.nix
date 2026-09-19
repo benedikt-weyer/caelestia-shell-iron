@@ -50,6 +50,7 @@
       with-cli = caelestia-shell.override {withCli = true;};
       debug = caelestia-shell.override {debug = true;};
       nix-backend-generic = caelestia-shell.nixBackendGeneric;
+      iron-polkit = pkgs.callPackage ./nix/iron-polkit.nix {};
       default = caelestia-shell;
     });
 

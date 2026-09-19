@@ -5,3 +5,5 @@ build/
 .cache/
 logs
 nix-backend-generic/target/
+iron-polkit/target/
+target/

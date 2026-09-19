@@ -93,6 +93,12 @@ Each subdirectory is its own `add_subdirectory` with its own `CMakeLists.txt`, a
 
 `extras/` builds a tiny standalone helper (`extras/version.cpp`) unrelated to the QML plugin — a version-reporting binary baked with `VERSION`/`GIT_REVISION` from CMake/git.
 
+### `iron-polkit/` (standalone Rust crate, edition 2024)
+A polkit authentication agent, independent of the QML shell (own `Cargo.toml`/`Cargo.lock`, packaged by `nix/iron-polkit.nix` as `packages.<system>.iron-polkit`; run as its own systemd user service, wired up in `~/nixos-config`). It registers on the system bus for the user's logind session, and shows an `iced` password prompt as an overlay layer surface via `iced_exwlshell` (needs the compositor's layer-shell support). Layout: `agent.rs` (D-Bus `AuthenticationAgent` + registration), `helper.rs` (PAM conversation with `polkit-agent-helper-1`), `ui.rs` (iced UI), `protocol.rs` (channel messages between them).
+- polkit >= 126 (NixOS's) has **no setuid helper wrapper**: the agent connects to `/run/polkit/agent-helper.socket`, writes `<user>\n<cookie>\n`, then speaks the `PAM_PROMPT_ECHO_OFF`/`SUCCESS`/`FAILURE` line protocol. The setuid-binary path is only a fallback (`IRON_POLKIT_HELPER`).
+- The wayland/xkbcommon libs are `dlopen`ed, so the Nix package wraps the binary with `LD_LIBRARY_PATH`; without it startup panics with `NoWaylandLib`.
+- To test without a UI-less `pkexec`: run the binary, then `pkcheck --action-id org.freedesktop.systemd1.manage-units --process $$ --allow-user-interaction` (`pkexec` needs the setuid wrapper from a switched NixOS generation).
+
 ## Conventions
 
 - Commit messages: `module: change` (lowercase subject, no leading capital — enforced by `check-pr-title.yml`). See allowed scopes in `.github/workflows/check-pr-title.yml` (shell modules like `bar`, `dashboard`, `launcher`, ... and plugin areas like `core`, `config`, `services`, `settings`, `wayland`/`plugins`, ...). Squash multiple changes into one commit when related; put the most impactful change in the subject and the rest in the body.

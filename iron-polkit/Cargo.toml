@@ -1,0 +1,23 @@
+[package]
+name = "iron-polkit"
+version = "0.1.0"
+edition = "2024"
+description = "Polkit authentication agent for ironland-compositor sessions, with an iced layer-shell prompt"
+license = "GPL-3.0-only"
+
+[[bin]]
+name = "iron-polkit"
+path = "src/main.rs"
+
+[dependencies]
+# Software rendering only: a password prompt doesn't need a GPU, and it keeps
+# the runtime closure free of vulkan/GL libraries.
+iced = { version = "0.14", default-features = false, features = ["tiny-skia", "tokio", "wayland"] }
+iced_exwlshell = "0.20"
+zbus = { version = "5", default-features = false, features = ["tokio"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "process", "io-util", "sync", "signal", "time", "net"] }
+futures = "0.3"
+nix = { version = "0.30", default-features = false, features = ["user"] }
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
