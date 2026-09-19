@@ -40,6 +40,12 @@ Item {
                 iconName: "cloud",
                 text: qsTr("Weather"),
                 enabled: Config.dashboard.showWeather
+            },
+            {
+                component: nixComponent,
+                iconName: "terminal",
+                text: qsTr("Nix"),
+                enabled: Config.dashboard.showNix
             }
         ];
         return allTabs.filter(tab => tab.enabled);
@@ -179,6 +185,12 @@ Item {
                 id: weatherComponent
 
                 WeatherTab {}
+            }
+
+            Component {
+                id: nixComponent
+
+                NixTab {}
             }
 
             Behavior on contentX {

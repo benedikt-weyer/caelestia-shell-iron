@@ -49,6 +49,7 @@
       };
       with-cli = caelestia-shell.override {withCli = true;};
       debug = caelestia-shell.override {debug = true;};
+      nix-backend-generic = caelestia-shell.nixBackendGeneric;
       default = caelestia-shell;
     });
 
@@ -60,7 +61,7 @@
       in
         mkShell {
           inputsFrom = [shell shell.plugin shell.extras];
-          packages = with pkgs; [clazy material-symbols rubik nerd-fonts.caskaydia-cove];
+          packages = with pkgs; [clazy material-symbols rubik nerd-fonts.caskaydia-cove cargo rustc rust-analyzer];
           CAELESTIA_XKB_RULES_PATH = "${pkgs.xkeyboard-config}/share/xkeyboard-config-2/rules/base.lst";
         };
     });

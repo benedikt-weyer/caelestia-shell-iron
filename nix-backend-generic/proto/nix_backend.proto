@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+// Local IPC contract between the shell (a grpc++ client, see
+// plugin/src/Caelestia/Services/NixBackend) and nix-backend-generic (the
+// tonic server implementing this service). Served over a unix socket, never
+// a network port - see src/main.rs.
+package caelestia.nixbackend.v1;
+
+service NixBackend {
+    // Runs `nix flake update` against the configured flake, streaming
+    // progress as it happens.
+    rpc UpdateFlake(UpdateFlakeRequest) returns (stream ProgressEvent);
+
+    // Builds the named nixosConfiguration, diffs it against the running
+    // system, then (unless mode is TEST) registers it as a system generation
+    // and activates it. Each privileged step is authorized individually via
+    // polkit (pkexec) - the daemon itself never runs as root.
+    rpc Rebuild(RebuildRequest) returns (stream ProgressEvent);
+
+    // Reports when the flake was last changed, from git history.
+    rpc GetFlakeStatus(FlakeStatusRequest) returns (FlakeStatusReply);
+}
+
+// Identifies which flake/host to operate on. Either field left empty falls
+// back to the daemon's own resolution (NIX_BACKEND_CONFIG_DIR /
+// NIX_BACKEND_HOST_NAME env vars, then /etc/nixos + `hostname`).
+message SystemTarget {
+    string config_dir = 1;
+    string host_name = 2;
+}
+
+enum RebuildMode {
+    REBUILD_MODE_UNSPECIFIED = 0;
+    SWITCH = 1;
+    BOOT = 2;
+    TEST = 3;
+}
+
+message UpdateFlakeRequest {
+    SystemTarget target = 1;
+}
+
+message RebuildRequest {
+    SystemTarget target = 1;
+    RebuildMode mode = 2;
+}
+
+message FlakeStatusRequest {
+    SystemTarget target = 1;
+}
+
+message FlakeStatusReply {
+    bool has_git_history = 1;
+    // RFC 3339 / ISO 8601, empty if has_git_history is false
+    string last_modified_iso8601 = 2;
+    string last_commit_subject = 3;
+    string last_commit_hash = 4;
+}
+
+enum EventPhase {
+    PHASE_UNSPECIFIED = 0;
+    STARTED = 1;
+    FLAKE_UPDATE = 2;
+    BUILD = 3;
+    DIFF = 4;
+    REGISTER = 5;
+    ACTIVATE = 6;
+    FINISHED = 7;
+    FAILED = 8;
+}
+
+message ProgressEvent {
+    EventPhase phase = 1;
+    // Human-readable status line for display in the shell's log view.
+    string message = 2;
+    bool is_error = 3;
+    // 0..1 when derivable from nix's own progress reporting, -1 otherwise.
+    double fraction_done = 4;
+}

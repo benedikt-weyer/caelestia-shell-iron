@@ -28,6 +28,12 @@
   cmake,
   ninja,
   pkg-config,
+  rustPlatform,
+  protobuf,
+  grpc,
+  abseil-cpp,
+  c-ares,
+  re2,
   caelestia-cli,
   m3shapes,
   debug ? false,
@@ -37,6 +43,17 @@
   version = "1.0.0";
 
   qs = quickshell.withModules [qt6.qtimageformats m3shapes];
+
+  nixBackendGeneric = rustPlatform.buildRustPackage {
+    pname = "nix-backend-generic";
+    inherit version;
+    src = ./../nix-backend-generic;
+    cargoLock.lockFile = ./../nix-backend-generic/Cargo.lock;
+    # tonic-build (see nix-backend-generic/build.rs) shells out to protoc at build time.
+    nativeBuildInputs = [protobuf];
+
+    meta.mainProgram = "nix-backend-generic";
+  };
 
   runtimeDeps =
     [
@@ -49,6 +66,7 @@
       wl-clipboard
       libqalculate
       bash
+      nixBackendGeneric
     ]
     ++ extraRuntimeDeps
     ++ lib.optional withCli caelestia-cli;
@@ -100,7 +118,31 @@
     # plugin/src/Caelestia/Wayland) - the shell's own client bindings for
     # ironland-compositor's `ironland-shortcuts-v1`/`ironland-focus-grab-v1`,
     # generated from the XML under plugin/protocols at build time.
-    buildInputs = [qt6.qtbase qt6.qtdeclarative qt6.qtshadertools qt6.qtwayland wayland wayland-protocols libqalculate pipewire aubio libcava fftw lm_sensors];
+    #
+    # protobuf/grpc (+ their own abseil-cpp/c-ares/re2 link deps, which
+    # nixpkgs' grpc/protobuf cmake configs expect *us* to find_package too)
+    # are for Caelestia.NixBackend's gRPC client (see
+    # plugin/src/Caelestia/NixBackend), codegenerated at build time from
+    # ../nix-backend-generic/proto/nix_backend.proto.
+    buildInputs = [
+      qt6.qtbase
+      qt6.qtdeclarative
+      qt6.qtshadertools
+      qt6.qtwayland
+      wayland
+      wayland-protocols
+      libqalculate
+      pipewire
+      aubio
+      libcava
+      fftw
+      lm_sensors
+      protobuf
+      grpc
+      abseil-cpp
+      c-ares
+      re2
+    ];
 
     dontWrapQtApps = true;
     cmakeFlags =
@@ -149,7 +191,7 @@ in
     '';
 
     passthru = {
-      inherit plugin extras;
+      inherit plugin extras nixBackendGeneric;
     };
 
     meta = {

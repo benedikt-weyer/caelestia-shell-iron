@@ -11,6 +11,11 @@ cd "$repo_root"
 
 cmake --build build
 
+# NixBackendClient (plugin/src/Caelestia/NixBackend) spawns this on demand if
+# nothing's listening on its socket yet, but only if it's on PATH.
+cargo build --release --manifest-path "$repo_root/nix-backend-generic/Cargo.toml"
+export PATH="$repo_root/nix-backend-generic/target/release:$PATH"
+
 # The C++ plugin (import Caelestia) lives under build/qml; the shell QML tree
 # (shell.qml, modules/, services/, utils/, components/, assets/) is only
 # staged into build/qml by `cmake --install`, so run straight from the repo

@@ -4,3 +4,4 @@
 build/
 .cache/
 logs
+nix-backend-generic/target/
