@@ -78,6 +78,16 @@ Singleton {
         return parts.join("\n");
     }
 
+    // Copies the error report via wl-copy rather than Quickshell.clipboardText:
+    // Qt's clipboard on Wayland needs keyboard focus to take the selection, which
+    // the dashboard doesn't have, so that path silently copies nothing. wl-copy
+    // goes through the login shell for the same minimal-PATH reason as Apps.launch.
+    function copyError(): void {
+        const shell = Quickshell.env("SHELL") || "/bin/sh";
+        const text = root.errorText().replace(/'/g, `'\\''`);
+        Quickshell.execDetached([shell, "-lc", `wl-copy -- '${text}'`]);
+    }
+
     function clearLog(): void {
         root.log.clear();
     }

@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
 import Caelestia.Config
 import qs.components
 import qs.components.containers
@@ -153,7 +152,7 @@ Item {
                         isRound: true
                         font: Tokens.font.icon.medium
                         onClicked: {
-                            Quickshell.clipboardText = NixBackend.errorText();
+                            NixBackend.copyError();
                             copyTimer.restart();
                         }
 
