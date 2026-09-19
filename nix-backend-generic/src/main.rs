@@ -58,9 +58,42 @@ impl NixBackend for Service {
     }
 }
 
+/// The daemon is usually spawned by the shell, whose systemd unit runs with a
+/// minimal PATH that lacks the system/user profile dirs - so `nix`, `git` and
+/// `pkexec` wouldn't resolve. Append the standard NixOS locations (after
+/// whatever is already there, so an explicit PATH still wins).
+fn ensure_system_path() {
+    let mut dirs: Vec<std::path::PathBuf> = std::env::var_os("PATH")
+        .map(|p| std::env::split_paths(&p).collect())
+        .unwrap_or_default();
+
+    let mut extra = vec![
+        std::path::PathBuf::from("/run/wrappers/bin"),
+        std::path::PathBuf::from("/run/current-system/sw/bin"),
+        std::path::PathBuf::from("/nix/var/nix/profiles/default/bin"),
+    ];
+    if let Some(home) = std::env::var_os("HOME") {
+        extra.push(std::path::Path::new(&home).join(".nix-profile/bin"));
+    }
+    if let Some(user) = std::env::var_os("USER") {
+        extra.push(std::path::Path::new("/etc/profiles/per-user").join(user).join("bin"));
+    }
+
+    for dir in extra {
+        if !dirs.contains(&dir) {
+            dirs.push(dir);
+        }
+    }
+
+    if let Ok(joined) = std::env::join_paths(dirs) {
+        std::env::set_var("PATH", joined);
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().with_env_filter(tracing_subscriber::EnvFilter::from_default_env()).init();
+    ensure_system_path();
 
     let socket_path = config::socket_path();
     // Leftover socket from a crashed previous run - a fresh bind fails with
