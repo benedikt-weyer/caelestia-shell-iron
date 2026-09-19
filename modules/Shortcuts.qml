@@ -140,6 +140,14 @@ Scope {
         onPressed: Audio.decrementVolume()
     }
 
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "volumeMute"
+        description: "Toggle mute"
+        onPressed: Audio.toggleMute()
+    }
+
     // Owned entirely by the shell (via `ironland-shortcuts-v1`'s `bind`
     // request, not the compositor's `[shortcuts]` config - see
     // CustomShortcut/IronlandShortcut) since this only ever toggles this

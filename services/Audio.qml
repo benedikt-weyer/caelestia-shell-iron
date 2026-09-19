@@ -47,6 +47,11 @@ Singleton {
         setVolume(volume - (amount || GlobalConfig.services.audioIncrement));
     }
 
+    function toggleMute(): void {
+        if (sink?.ready && sink?.audio)
+            sink.audio.muted = !sink.audio.muted;
+    }
+
     function setSourceVolume(newVolume: real): void {
         if (source?.ready && source?.audio) {
             source.audio.muted = false;
