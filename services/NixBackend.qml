@@ -31,6 +31,8 @@ Singleton {
     readonly property real fractionDone: NixBackendClient.fractionDone
     readonly property string statusMessage: NixBackendClient.statusMessage
     readonly property string lastError: NixBackendClient.lastError
+    readonly property list<var> activeItems: NixBackendClient.activeItems
+    readonly property var stats: NixBackendClient.stats
 
     readonly property bool flakeHasGitHistory: NixBackendClient.flakeHasGitHistory
     readonly property string flakeLastModified: NixBackendClient.flakeLastModified

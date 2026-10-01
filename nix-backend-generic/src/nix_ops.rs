@@ -1,4 +1,5 @@
 use std::process::Stdio;
+use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -6,8 +7,8 @@ use tokio::process::Command;
 use tokio::sync::mpsc::Sender;
 use tonic::Status;
 
+use crate::activity::{self, ActivityTracker};
 use crate::config::ResolvedTarget;
-use crate::log_parser::parse_line;
 use crate::proto::{EventPhase, FlakeStatusReply, ProgressEvent, RebuildMode};
 
 pub type EventTx = Sender<Result<ProgressEvent, Status>>;
@@ -19,28 +20,50 @@ async fn send(tx: &EventTx, phase: EventPhase, message: impl Into<String>, is_er
             message: message.into(),
             is_error,
             fraction_done: -1.0,
+            active_items: Vec::new(),
+            stats: None,
         }))
         .await;
 }
 
-async fn forward_line(tx: &EventTx, phase: EventPhase, line: &str) {
-    let parsed = parse_line(line);
-    if parsed.message.is_none() && parsed.fraction_done.is_none() {
+async fn forward_line(tx: &EventTx, phase: EventPhase, line: &str, tracker: &Mutex<ActivityTracker>) {
+    let line = line.trim_end();
+    if line.is_empty() {
         return;
     }
+
+    let message = match line.strip_prefix("@nix ") {
+        Some(json) => match serde_json::from_str::<serde_json::Value>(json) {
+            Ok(value) => {
+                let message = activity::extract_message(&value);
+                tracker.lock().unwrap_or_else(|e| e.into_inner()).handle_json(&value);
+                message
+            }
+            Err(_) => Some(json.to_owned()),
+        },
+        None => Some(line.to_owned()),
+    };
+
+    let (active_items, stats) = tracker.lock().unwrap_or_else(|e| e.into_inner()).snapshot();
+    let fraction = activity::fraction_done(&stats);
+
     let _ = tx
         .send(Ok(ProgressEvent {
             phase: phase as i32,
-            message: parsed.message.unwrap_or_default(),
+            message: message.unwrap_or_default(),
             is_error: false,
-            fraction_done: parsed.fraction_done.unwrap_or(-1.0),
+            fraction_done: fraction,
+            active_items,
+            stats: Some(stats),
         }))
         .await;
 }
 
 /// Runs a command to completion, streaming every stdout/stderr line as a
 /// `ProgressEvent` tagged with `phase` as it's produced (not buffered until
-/// exit) so the UI's log view fills in live.
+/// exit) so the UI's log view fills in live. Also feeds every line through a
+/// fresh `ActivityTracker`, so each `ProgressEvent` carries a current
+/// snapshot of what nix is actually building/downloading right now.
 async fn run_streamed(program: &str, args: &[&str], phase: EventPhase, tx: &EventTx) -> anyhow::Result<()> {
     let mut child = Command::new(program)
         .args(args)
@@ -53,19 +76,23 @@ async fn run_streamed(program: &str, args: &[&str], phase: EventPhase, tx: &Even
     let stdout = child.stdout.take().expect("stdout was piped");
     let stderr = child.stderr.take().expect("stderr was piped");
 
+    let tracker = Arc::new(Mutex::new(ActivityTracker::new()));
+
     let tx_out = tx.clone();
+    let tracker_out = tracker.clone();
     let out_task = tokio::spawn(async move {
         let mut lines = BufReader::new(stdout).lines();
         while let Ok(Some(line)) = lines.next_line().await {
-            forward_line(&tx_out, phase, &line).await;
+            forward_line(&tx_out, phase, &line, &tracker_out).await;
         }
     });
 
     let tx_err = tx.clone();
+    let tracker_err = tracker.clone();
     let err_task = tokio::spawn(async move {
         let mut lines = BufReader::new(stderr).lines();
         while let Ok(Some(line)) = lines.next_line().await {
-            forward_line(&tx_err, phase, &line).await;
+            forward_line(&tx_err, phase, &line, &tracker_err).await;
         }
     });
 

@@ -5,6 +5,7 @@
 #include <qobject.h>
 #include <qqmlintegration.h>
 #include <qstring.h>
+#include <qvariant.h>
 
 namespace caelestia::services {
 
@@ -28,6 +29,12 @@ class NixBackendClient : public QObject {
     Q_PROPERTY(qreal fractionDone READ fractionDone NOTIFY fractionDoneChanged)
     Q_PROPERTY(QString statusMessage READ statusMessage NOTIFY statusMessageChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
+    // Each entry: {id, kind: "build"|"download", status: "running"|"done", name,
+    // bytesDone, bytesExpected, bytesPerSec}.
+    Q_PROPERTY(QVariantList activeItems READ activeItems NOTIFY activeItemsChanged)
+    // {buildsDone, buildsExpected, buildsRunning, buildsFailed, copiesDone, copiesExpected,
+    //  copiesRunning, copiesFailed, downloadBytesDone, downloadBytesExpected}.
+    Q_PROPERTY(QVariantMap stats READ stats NOTIFY statsChanged)
     Q_PROPERTY(bool flakeHasGitHistory READ flakeHasGitHistory NOTIFY flakeStatusChanged)
     Q_PROPERTY(QString flakeLastModified READ flakeLastModified NOTIFY flakeStatusChanged)
     Q_PROPERTY(QString flakeLastCommitSubject READ flakeLastCommitSubject NOTIFY flakeStatusChanged)
@@ -60,6 +67,8 @@ public:
     [[nodiscard]] qreal fractionDone() const;
     [[nodiscard]] QString statusMessage() const;
     [[nodiscard]] QString lastError() const;
+    [[nodiscard]] QVariantList activeItems() const;
+    [[nodiscard]] QVariantMap stats() const;
     [[nodiscard]] bool flakeHasGitHistory() const;
     [[nodiscard]] QString flakeLastModified() const;
     [[nodiscard]] QString flakeLastCommitSubject() const;
@@ -77,6 +86,8 @@ signals:
     void fractionDoneChanged();
     void statusMessageChanged();
     void lastErrorChanged();
+    void activeItemsChanged();
+    void statsChanged();
     void flakeStatusChanged();
     void lineLogged(const QString& message, bool isError);
     void finished(bool success);
@@ -92,12 +103,16 @@ private:
     void setFractionDone(qreal value);
     void setStatusMessage(const QString& value);
     void setLastError(const QString& value);
+    void setActiveItems(QVariantList value);
+    void setStats(QVariantMap value);
 
     bool m_running = false;
     Phase m_phase = Phase::Idle;
     qreal m_fractionDone = -1.0;
     QString m_statusMessage;
     QString m_lastError;
+    QVariantList m_activeItems;
+    QVariantMap m_stats;
     bool m_flakeHasGitHistory = false;
     QString m_flakeLastModified;
     QString m_flakeLastCommitSubject;

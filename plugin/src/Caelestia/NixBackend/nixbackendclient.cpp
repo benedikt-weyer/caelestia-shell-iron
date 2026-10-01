@@ -52,6 +52,38 @@ NixBackendClient::Phase toClientPhase(pb::EventPhase phase) {
     return static_cast<NixBackendClient::Phase>(static_cast<quint8>(phase));
 }
 
+QVariantList toActiveItems(const pb::ProgressEvent& event) {
+    QVariantList items;
+    items.reserve(event.active_items_size());
+    for (const pb::BuildItem& item : event.active_items()) {
+        QVariantMap entry;
+        entry[u"id"_s] = static_cast<qulonglong>(item.id());
+        entry[u"kind"_s] = item.kind() == pb::BUILD_ITEM_DOWNLOAD ? u"download"_s : u"build"_s;
+        entry[u"status"_s] = item.status() == pb::BUILD_ITEM_DONE ? u"done"_s : u"running"_s;
+        entry[u"name"_s] = QString::fromStdString(item.name());
+        entry[u"bytesDone"_s] = item.bytes_done();
+        entry[u"bytesExpected"_s] = item.bytes_expected();
+        entry[u"bytesPerSec"_s] = item.bytes_per_sec();
+        items.append(entry);
+    }
+    return items;
+}
+
+QVariantMap toStats(const pb::BuildStats& stats) {
+    QVariantMap map;
+    map[u"buildsDone"_s] = static_cast<qlonglong>(stats.builds_done());
+    map[u"buildsExpected"_s] = static_cast<qlonglong>(stats.builds_expected());
+    map[u"buildsRunning"_s] = static_cast<qlonglong>(stats.builds_running());
+    map[u"buildsFailed"_s] = static_cast<qlonglong>(stats.builds_failed());
+    map[u"copiesDone"_s] = static_cast<qlonglong>(stats.copies_done());
+    map[u"copiesExpected"_s] = static_cast<qlonglong>(stats.copies_expected());
+    map[u"copiesRunning"_s] = static_cast<qlonglong>(stats.copies_running());
+    map[u"copiesFailed"_s] = static_cast<qlonglong>(stats.copies_failed());
+    map[u"downloadBytesDone"_s] = static_cast<qlonglong>(stats.download_bytes_done());
+    map[u"downloadBytesExpected"_s] = static_cast<qlonglong>(stats.download_bytes_expected());
+    return map;
+}
+
 void fillTarget(pb::SystemTarget* target, const QString& configDir, const QString& hostName) {
     target->set_config_dir(configDir.toStdString());
     target->set_host_name(hostName.toStdString());
@@ -124,10 +156,13 @@ struct NixBackendClient::Impl {
             const QString message = QString::fromStdString(event.message());
             const bool isError = event.is_error();
             const qreal fraction = event.fraction_done();
+            QVariantList activeItems = toActiveItems(event);
+            QVariantMap stats = event.has_stats() ? toStats(event.stats()) : QVariantMap();
 
             QMetaObject::invokeMethod(
                 self,
-                [self, phase, message, isError, fraction]() {
+                [self, phase, message, isError, fraction, activeItems = std::move(activeItems),
+                    stats = std::move(stats)]() mutable {
                     self->setPhase(phase);
                     if (fraction >= 0.0) {
                         self->setFractionDone(fraction);
@@ -139,6 +174,8 @@ struct NixBackendClient::Impl {
                     if (isError) {
                         self->setLastError(message);
                     }
+                    self->setActiveItems(std::move(activeItems));
+                    self->setStats(std::move(stats));
                 },
                 Qt::QueuedConnection);
         }
@@ -161,6 +198,8 @@ struct NixBackendClient::Impl {
                     emit self->lineLogged(errorText, true);
                 }
                 self->setRunning(false);
+                self->setActiveItems({});
+                self->setStats({});
                 emit self->finished(success);
             },
             Qt::QueuedConnection);
@@ -189,6 +228,14 @@ QString NixBackendClient::statusMessage() const {
 
 QString NixBackendClient::lastError() const {
     return m_lastError;
+}
+
+QVariantList NixBackendClient::activeItems() const {
+    return m_activeItems;
+}
+
+QVariantMap NixBackendClient::stats() const {
+    return m_stats;
 }
 
 bool NixBackendClient::flakeHasGitHistory() const {
@@ -247,6 +294,22 @@ void NixBackendClient::setLastError(const QString& value) {
     emit lastErrorChanged();
 }
 
+void NixBackendClient::setActiveItems(QVariantList value) {
+    if (m_activeItems == value) {
+        return;
+    }
+    m_activeItems = std::move(value);
+    emit activeItemsChanged();
+}
+
+void NixBackendClient::setStats(QVariantMap value) {
+    if (m_stats == value) {
+        return;
+    }
+    m_stats = std::move(value);
+    emit statsChanged();
+}
+
 void NixBackendClient::updateFlake(const QString& configDir, const QString& hostName) {
     if (m_running) {
         return;
@@ -264,6 +327,8 @@ void NixBackendClient::updateFlake(const QString& configDir, const QString& host
     setFractionDone(-1.0);
     setStatusMessage(QString());
     setLastError(QString());
+    setActiveItems({});
+    setStats({});
 
     const QString path = socketPath();
     Impl* impl = m_impl.get();
@@ -301,6 +366,8 @@ void NixBackendClient::rebuild(const QString& configDir, const QString& hostName
     setFractionDone(-1.0);
     setStatusMessage(QString());
     setLastError(QString());
+    setActiveItems({});
+    setStats({});
 
     const QString path = socketPath();
     Impl* impl = m_impl.get();

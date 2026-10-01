@@ -1,5 +1,5 @@
+mod activity;
 mod config;
-mod log_parser;
 mod nix_ops;
 
 pub mod proto {

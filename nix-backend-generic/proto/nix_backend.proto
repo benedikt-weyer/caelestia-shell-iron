@@ -69,6 +69,53 @@ enum EventPhase {
     FAILED = 8;
 }
 
+enum BuildItemKind {
+    BUILD_ITEM_KIND_UNSPECIFIED = 0;
+    BUILD_ITEM_BUILD = 1;
+    BUILD_ITEM_DOWNLOAD = 2;
+}
+
+enum BuildItemStatus {
+    BUILD_ITEM_STATUS_UNSPECIFIED = 0;
+    BUILD_ITEM_RUNNING = 1;
+    BUILD_ITEM_DONE = 2;
+}
+
+// One derivation build or substitution download that's currently (or very
+// recently) in flight, derived from nix's own `--log-format internal-json`
+// activity stream (see nix-backend-generic/src/activity.rs). Nix doesn't
+// expose the full upfront dependency graph cheaply, so this is a live view
+// of what's actually running/just finished, not a precomputed plan.
+message BuildItem {
+    // The activity id nix assigned this item, stable for its lifetime.
+    uint64 id = 1;
+    BuildItemKind kind = 2;
+    BuildItemStatus status = 3;
+    // Derivation or store-path name, e.g. "hello-2.12.1".
+    string name = 4;
+    // Bytes transferred so far - only meaningful for downloads.
+    double bytes_done = 5;
+    // Expected total bytes - 0 if unknown.
+    double bytes_expected = 6;
+    double bytes_per_sec = 7;
+}
+
+// Aggregate counts nix itself reports for the whole build/substitution
+// graph, so the shell can show "N built, M downloading, K waiting" without
+// having to walk the dependency graph itself.
+message BuildStats {
+    int64 builds_done = 1;
+    int64 builds_expected = 2;
+    int64 builds_running = 3;
+    int64 builds_failed = 4;
+    int64 copies_done = 5;
+    int64 copies_expected = 6;
+    int64 copies_running = 7;
+    int64 copies_failed = 8;
+    int64 download_bytes_done = 9;
+    int64 download_bytes_expected = 10;
+}
+
 message ProgressEvent {
     EventPhase phase = 1;
     // Human-readable status line for display in the shell's log view.
@@ -76,4 +123,7 @@ message ProgressEvent {
     bool is_error = 3;
     // 0..1 when derivable from nix's own progress reporting, -1 otherwise.
     double fraction_done = 4;
+    // Current snapshot of in-flight/recently-finished builds and downloads.
+    repeated BuildItem active_items = 5;
+    BuildStats stats = 6;
 }
