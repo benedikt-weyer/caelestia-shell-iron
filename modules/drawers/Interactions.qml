@@ -22,6 +22,7 @@ CustomMouseArea {
     property bool dashboardShortcutActive
     property bool osdShortcutActive
     property bool utilitiesShortcutActive
+    property bool launcherShortcutActive
 
     function withinPanelHeight(panel: Item, x: real, y: real): bool {
         const panelY = root.borderThickness + panel.y;
@@ -77,6 +78,10 @@ CustomMouseArea {
 
             if (!utilitiesShortcutActive)
                 screenState.utilities = false;
+
+            // Only hide launcher if it was opened by hover, not by shortcut
+            if (Config.launcher.showOnHover && !launcherShortcutActive)
+                screenState.launcher = false;
 
             if (!popouts.currentName.startsWith("traymenu") || ((popouts.current as StackView)?.depth ?? 0) <= 1) {
                 popouts.hasCurrent = false;
@@ -249,8 +254,16 @@ CustomMouseArea {
     // Monitor individual visibility changes
     Connections {
         function onLauncherChanged() {
-            // If launcher is hidden, clear shortcut flags for dashboard and OSD
-            if (!root.screenState.launcher) {
+            if (root.screenState.launcher) {
+                // Launcher became visible, immediately check if this should be shortcut mode
+                const inLauncherArea = root.inBottomPanel(root.panels.launcher, root.mouseX, root.mouseY);
+                if (!inLauncherArea)
+                    root.launcherShortcutActive = true;
+            } else {
+                // Launcher hidden, clear shortcut flag
+                root.launcherShortcutActive = false;
+
+                // Also clear shortcut flags for dashboard and OSD
                 root.dashboardShortcutActive = false;
                 root.osdShortcutActive = false;
                 root.utilitiesShortcutActive = false;
