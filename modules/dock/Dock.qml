@@ -201,6 +201,22 @@ Variants {
             visible: target !== null
             color: "transparent"
 
+            anchor.item: target?.anchorItem ?? null
+            anchor.edges: Edges.Top
+            anchor.gravity: Edges.Top
+            anchor.adjustment: PopupAdjustment.Slide | PopupAdjustment.Flip
+            anchor.margins.bottom: Tokens.spacing.small
+
+            grabFocus: true
+
+            implicitWidth: Math.max(180, column.implicitWidth + column.anchors.margins * 2)
+            implicitHeight: column.implicitHeight + column.anchors.margins * 2
+
+            onVisibleChanged: {
+                if (!visible)
+                    win.menuTarget = null;
+            }
+
             Instantiator {
                 id: actionInstantiator
 
@@ -220,22 +236,6 @@ Variants {
 
                     onClicked: actionMenuItem.modelData.execute()
                 }
-            }
-
-            anchor.item: target?.anchorItem ?? null
-            anchor.edges: Edges.Top
-            anchor.gravity: Edges.Top
-            anchor.adjustment: PopupAdjustment.Slide | PopupAdjustment.Flip
-            anchor.margins.bottom: Tokens.spacing.small
-
-            grabFocus: true
-
-            implicitWidth: Math.max(180, column.implicitWidth + column.anchors.margins * 2)
-            implicitHeight: column.implicitHeight + column.anchors.margins * 2
-
-            onVisibleChanged: {
-                if (!visible)
-                    win.menuTarget = null;
             }
 
             Item {
